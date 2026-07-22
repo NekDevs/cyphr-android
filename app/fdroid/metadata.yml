@@ -1,0 +1,48 @@
+# F-Droid build metadata for Cyphr.
+# Submit this file to https://gitlab.com/fdroid/fdroiddata
+# as metadata/org.cyphr.app.yml
+
+Categories:
+  - Communications
+License: MIT
+Author Name: Cyphr contributors
+Author Email:
+Web Site: https://github.com/NekDevs/cyphr-android
+Source Code: https://github.com/NekDevs/cyphr-android
+Issue Tracker: https://github.com/NekDevs/cyphr-android/issues
+Changelog: https://github.com/NekDevs/cyphr-android/blob/main/CHANGELOG.md
+
+Name: Cyphr
+Summary: Privacy layer for messaging
+Description: |
+  Cyphr encrypts message content locally before you send it through
+  third-party platforms such as Instagram, Discord, or any messenger.
+  Two users exchange public keys (QR code or text) and encrypt
+  plaintext for each other. The carrier sees only ciphertext.
+
+  Features:
+  * HPKE (X25519) + AES-256-GCM encryption
+  * Multi-profile support with key rotation
+  * Contact management with fingerprint verification
+  * Biometric app unlock
+  * Encrypted on-device storage
+  * Replay protection
+  * Custom keyboard IME
+  * QR code scanning / generation for key exchange
+  * No internet, no accounts, no analytics
+
+RepoType: git
+Repo: https://github.com/NekDevs/cyphr-android
+
+Builds:
+  - versionName: 1.0.0
+    versionCode: 1
+    commit: v1.0.0
+    subdir: app
+    gradle:
+      - yes
+
+AutoUpdateMode: Version
+UpdateCheckMode: Tags
+CurrentVersion: 1.0.0
+CurrentVersionCode: 1

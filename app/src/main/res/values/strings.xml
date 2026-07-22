@@ -1,0 +1,327 @@
+<resources>
+    <string name="app_name">Cyphr</string>
+
+    <!-- Quick Settings Tile -->
+    <string name="tile_label">Cyphr</string>
+    <string name="tile_no_contact">No contact</string>
+
+    <!-- Keyboard (IME) -->
+    <string name="ime_name">Cyphr Keyboard</string>
+
+    <!-- Accessibility Service -->
+    <string name="accessibility_service_label">Cyphr Screen Translation</string>
+    <string name="accessibility_service_description">Detects Cyphr encrypted payloads on screen and shows decrypted text in a floating overlay.</string>
+
+    <string name="overlay_copy">Copy</string>
+    <string name="overlay_dismiss">Dismiss</string>
+
+    <!-- Home Screen -->
+    <string name="home_title">Cyphr</string>
+    <string name="home_hero_desc">Local text transformation for copy-paste workflows.\nExperimental — no security guarantee.</string>
+    <string name="home_section_identity">Identity &amp; Contacts</string>
+    <string name="home_section_tools">Text Tools</string>
+    <string name="home_profiles">Profiles</string>
+    <string name="home_profiles_desc">Create and switch between local identities</string>
+    <string name="home_my_identity">My Identity</string>
+    <string name="home_my_identity_desc">View your fingerprint, share your key, and link contacts</string>
+    <string name="home_contacts">Contacts</string>
+    <string name="home_contacts_desc">View and manage linked contacts</string>
+    <string name="home_transform">Transform</string>
+    <string name="home_transform_desc">Encrypt text for a linked contact</string>
+    <string name="home_inspect">Inspect</string>
+    <string name="home_inspect_desc">Decrypt and view a received payload</string>
+    <string name="home_message_log">Message Log</string>
+    <string name="home_message_log_desc">Review previously decrypted messages</string>
+    <string name="home_local_only">Local only</string>
+    <string name="home_no_accounts">No accounts</string>
+    <string name="home_theme_system">Theme: System</string>
+    <string name="home_theme_dark">Theme: Dark</string>
+    <string name="home_theme_light">Theme: Light</string>
+    <string name="home_settings">Settings</string>
+
+    <!-- Onboarding Screen -->
+    <string name="onboarding_welcome_title">Welcome to Cyphr</string>
+    <string name="onboarding_welcome_desc">Local text transformation for copy-paste workflows.\nNo accounts, no servers, no internet.</string>
+    <string name="onboarding_identity_title">Your Identity</string>
+    <string name="onboarding_identity_desc">Create profiles and generate keys.\nShare your public key with contacts via QR code.</string>
+    <string name="onboarding_tools_title">Text Tools</string>
+    <string name="onboarding_tools_desc">Encrypt text for contacts, decrypt received payloads.\nEverything works with your clipboard.</string>
+    <string name="onboarding_no_guarantee_title">No Guarantee</string>
+    <string name="onboarding_no_guarantee_desc">Experimental open-source software.\nNo security audit, no warranty.\nUse at your own risk.</string>
+    <string name="onboarding_skip">Skip</string>
+    <string name="onboarding_get_started">Get Started</string>
+    <string name="onboarding_save_error">Could not save onboarding state. Please try again.</string>
+
+    <!-- Contacts List Screen -->
+    <string name="contacts_title">Contacts</string>
+    <string name="contacts_back">Back</string>
+    <string name="contacts_add_heading">Add a contact</string>
+    <string name="contacts_paste_key">Paste their public key</string>
+    <string name="contacts_scan_qr">Scan QR code</string>
+    <string name="contacts_invalid_key">Invalid public key format</string>
+    <string name="contacts_name_template">Contact %s</string>
+    <string name="contacts_already_exists">Contact already exists</string>
+    <string name="contacts_key_matches">This key matches "%s".</string>
+    <string name="contacts_epoch_label">Epoch: %d</string>
+    <string name="contacts_display_name_label">Display name</string>
+    <string name="contacts_saved">Contact saved. Your key copied — send it to them.</string>
+    <string name="contacts_save_error">Could not save contact: %s</string>
+    <string name="contacts_save_button">Save contact</string>
+    <string name="contacts_empty">No contacts yet.\nPaste a contact\'s public key above to add one.</string>
+    <string name="contacts_status_verified">Verified</string>
+    <string name="contacts_status_revoked">Revoked</string>
+    <string name="contacts_status_unverified">Unverified</string>
+
+    <!-- Contact Detail Screen -->
+    <string name="contact_detail_title_fallback">Contact</string>
+    <string name="contact_detail_back">Back</string>
+    <string name="contact_detail_not_found">Contact not found.</string>
+    <string name="contact_detail_verification_status">Verification status</string>
+    <string name="contact_detail_key_changed">Key changed</string>
+    <string name="contact_detail_key_changed_desc">This contact\'s public key has been replaced since it was saved.</string>
+    <string name="contact_detail_verify_first">Verify the new fingerprint before trusting this contact.</string>
+    <string name="contact_detail_cancel_update">Cancel update</string>
+    <string name="contact_detail_import_new_key">Import new key</string>
+    <string name="contact_detail_paste_new_key">Paste their new public key</string>
+    <string name="contact_detail_invalid_key">Invalid public key format.</string>
+    <string name="contact_detail_parse">Parse</string>
+    <string name="contact_detail_new_fingerprint">New fingerprint</string>
+    <string name="contact_detail_key_epoch">Key epoch: %d</string>
+    <string name="contact_detail_updated">Contact key updated. Verification reset to unverified.</string>
+    <string name="contact_detail_update_failed">Failed to update contact key</string>
+    <string name="contact_detail_update_error">Could not update contact: %s</string>
+    <string name="contact_detail_update_button">Update contact key</string>
+    <string name="contact_detail_compare_title">Compare fingerprints</string>
+    <string name="contact_detail_compare_desc">Verify with your contact through a separate channel (in person, voice call) before marking as verified.</string>
+    <string name="contact_detail_their_fingerprint">Their fingerprint</string>
+    <string name="contact_detail_your_fingerprint">Your fingerprint</string>
+    <string name="contact_detail_key_epoch_label">Key epoch: %d</string>
+    <string name="contact_detail_contact_id">Contact ID: %s...</string>
+    <string name="contact_detail_marked_verified">Contact marked as verified</string>
+    <string name="contact_detail_verify_error">Could not update contact: %s</string>
+    <string name="contact_detail_mark_verified">Mark as verified</string>
+    <string name="contact_detail_verify_warning">Only mark as verified after comparing fingerprints out-of-band (in person, voice call, or a separately trusted channel).</string>
+    <string name="contact_detail_delete_title">Delete contact</string>
+    <string name="contact_detail_delete_body">This will remove the contact\'s public key and metadata. You will need to re-establish the link later.</string>
+    <string name="contact_detail_delete_confirm">Delete</string>
+    <string name="contact_detail_cancel">Cancel</string>
+    <string name="contact_detail_delete_error">Could not delete contact: %s</string>
+    <string name="contact_detail_delete_button">Delete contact</string>
+
+    <!-- Profile Screen -->
+    <string name="profile_title">Profiles</string>
+    <string name="profile_back">Back</string>
+    <string name="profile_rotate_confirm_title">Rotate key?</string>
+    <string name="profile_rotate_confirm_body">This will generate a new key pair for the current profile. Old payloads encrypted for this profile will no longer be decryptable. Share your new public key with contacts after rotating.</string>
+    <string name="profile_rotate_success">Key rotated. Share your new public key with contacts.</string>
+    <string name="profile_rotate_failed">Key rotation failed</string>
+    <string name="profile_rotate_error">Key rotation failed: %s</string>
+    <string name="profile_rotate_button">Rotate</string>
+    <string name="profile_cancel">Cancel</string>
+    <string name="profile_rename_title">Rename profile</string>
+    <string name="profile_name_label">Profile name</string>
+    <string name="profile_save">Save</string>
+    <string name="profile_delete_title">Delete profile?</string>
+    <string name="profile_delete_body">This will permanently delete the profile \"%s\" and all associated keys, contacts, and saved messages. This cannot be undone.</string>
+    <string name="profile_delete_confirm">Delete</string>
+    <string name="profile_active_heading">Active profile</string>
+    <string name="profile_id">ID: %s...</string>
+    <string name="profile_created">Created: %s</string>
+    <string name="profile_key_epoch">Key epoch: %d</string>
+    <string name="profile_rotate_action">Rotate key</string>
+    <string name="profile_rename_action">Rename</string>
+    <string name="profile_delete_action">Delete</string>
+    <string name="profile_other_heading">Other profiles</string>
+    <string name="profile_switch_action">Switch</string>
+    <string name="profile_create_action">Create</string>
+    <string name="profile_hint">Each profile has its own key pair and contacts. Switch between profiles to use different identities.</string>
+
+    <!-- My Identity Screen -->
+    <string name="identity_title">My Identity</string>
+    <string name="identity_back">Back</string>
+    <string name="identity_biometric_title">Share public key</string>
+    <string name="identity_biometric_subtitle">Authenticate to share your identity</string>
+    <string name="identity_unavailable">Identity is not available yet.\nProfile keys must be initialized first.</string>
+    <string name="identity_key_recently_rotated">Key recently rotated</string>
+    <string name="identity_rotated_desc">Your profile keys were recently rotated. Share your new public key with contacts to restore decryption ability.</string>
+    <string name="identity_fingerprint_heading">Your public key fingerprint</string>
+    <string name="identity_short_fingerprint">Short fingerprint</string>
+    <string name="identity_full_fingerprint">Full fingerprint</string>
+    <string name="identity_share_button">Share public key</string>
+    <string name="identity_share_desc">Send this string to a contact through any carrier app. They can paste it below to link your identity.</string>
+
+    <!-- Transform Text Screen -->
+    <string name="transform_title">Transform text</string>
+    <string name="transform_back">Back</string>
+    <string name="transform_input_label">Text to transform</string>
+    <string name="transform_size_warning">Plaintext is %d bytes — large payloads may cause issues</string>
+    <string name="transform_profile_label">Profile: %s</string>
+    <string name="transform_profile_default">Default</string>
+    <string name="transform_profile_custom">Custom</string>
+    <string name="transform_key_epoch">Key epoch %d</string>
+    <string name="transform_recipient">Recipient</string>
+    <string name="transform_no_contacts">No contacts yet. Add a contact from the home screen before transforming.</string>
+    <string name="transform_key_changed">Key changed</string>
+    <string name="transform_no_contacts_available">No contacts available. Add a contact first.</string>
+    <string name="transform_no_key">No recipient key available</string>
+    <string name="transform_storage_error">Storage error: %s</string>
+    <string name="transform_save_error">Could not save message: %s</string>
+    <string name="transform_button">Transform</string>
+    <string name="transform_result_title">Result</string>
+    <string name="transform_copied">Copied to clipboard</string>
+    <string name="transform_copy_button">Copy</string>
+    <string name="transform_hint">Your encrypted payload appears above. Share it via any carrier app.</string>
+
+    <!-- Message Log Screen -->
+    <string name="log_title">Message log</string>
+    <string name="log_back">Back</string>
+    <string name="log_empty_title">No saved messages</string>
+    <string name="log_empty_desc">Transformed messages are saved automatically.\nDecrypt a payload and tap Save to add received messages.</string>
+    <string name="log_delete_error">Could not delete message: %s</string>
+    <string name="log_to_prefix">To: %s</string>
+    <string name="log_unknown">Unknown</string>
+    <string name="log_unknown_sender">Unknown sender</string>
+    <string name="log_delete_button">Delete</string>
+    <string name="log_fingerprint">Fingerprint: %s</string>
+    <string name="log_counter">Counter: %d</string>
+    <string name="log_key_epoch">Key epoch: %d</string>
+    <string name="log_sent_prefix">Sent: %s</string>
+    <string name="log_decrypted_prefix">Decrypted: %s</string>
+    <string name="log_close">Close</string>
+
+    <!-- Inspect Payload Screen -->
+    <string name="inspect_replay_detected">Replay detected: this message counter was already received.</string>
+    <string name="inspect_decrypted_with">Decrypted with: %s</string>
+    <string name="inspect_unverified_key_changed"> (unverified, key changed)</string>
+    <string name="inspect_unverified"> (unverified)</string>
+    <string name="inspect_from_unknown">%s (unknown)</string>
+    <string name="inspect_no_keys">No profile keys available</string>
+    <string name="inspect_decryption_failed">Decryption failed with all profiles</string>
+    <string name="inspect_save_sender_title">Save sender as contact</string>
+    <string name="inspect_sender_fingerprint">Sender fingerprint: %s</string>
+    <string name="inspect_title">Inspect payload</string>
+    <string name="inspect_back">Back</string>
+    <string name="inspect_input_label">Payload to inspect</string>
+    <string name="inspect_paste_success">Payload pasted and inspected</string>
+    <string name="inspect_no_payload">No Cyphr payload found on clipboard</string>
+    <string name="inspect_clipboard_empty">Clipboard is empty</string>
+    <string name="inspect_clipboard_error">Could not read clipboard</string>
+    <string name="inspect_paste_button">Paste from clipboard</string>
+    <string name="inspect_button">Inspect</string>
+    <string name="inspect_decoded_title">Decoded payload</string>
+    <string name="inspect_copied">Copied — clipboard will auto-clear in 30s</string>
+    <string name="inspect_copy_button">Copy</string>
+    <string name="inspect_save">Save</string>
+    <string name="inspect_message_saved">Message saved to log</string>
+    <string name="inspect_save_as_contact">Save as contact</string>
+    <string name="inspect_hint">Paste a Cyphr payload above and tap Inspect.</string>
+
+    <!-- Settings Screen -->
+    <string name="settings_title">Settings</string>
+    <string name="settings_back">Back</string>
+    <string name="settings_biometric_title">Require biometric unlock</string>
+    <string name="settings_biometric_desc_available">Uses fingerprint, face, or device PIN/pattern when opening the app</string>
+    <string name="settings_biometric_desc_unavailable">Set a device lock screen to enable this option</string>
+    <string name="settings_biometric_update_error">Could not update biometric setting</string>
+    <string name="settings_save_error">Could not save setting: %s</string>
+    <string name="settings_section_keyboard">Keyboard &amp; Live Translation</string>
+    <string name="settings_keyboard_name">Cyphr Keyboard</string>
+    <string name="settings_keyboard_desc">Encrypt messages as you type in any app. Add the keyboard in system settings.</string>
+    <string name="settings_enabled_status">✔️ Enabled</string>
+    <string name="settings_disabled_status">❌ Disabled</string>
+    <string name="settings_enable_button">Enable</string>
+    <string name="settings_screen_name">Screen Translation</string>
+    <string name="settings_screen_desc">Auto-decrypt Cyphr payloads detected on screen via accessibility service.</string>
+
+    <!-- Biometric Gate -->
+    <string name="biometric_lockout">Too many attempts. Try again in 30 seconds or use your device PIN.</string>
+    <string name="biometric_locked_permanent">Biometric is permanently locked. Use your device PIN.</string>
+    <string name="biometric_prompt_title">Unlock Cyphr</string>
+    <string name="biometric_prompt_subtitle">Authenticate to access the app</string>
+    <string name="biometric_locked_title">Cyphr is locked</string>
+    <string name="biometric_locked_desc">Authenticate to unlock the app</string>
+    <string name="biometric_retry">Try again</string>
+
+    <!-- Main Activity -->
+    <string name="main_clipboard_detected">Cyphr payload detected on clipboard</string>
+    <string name="main_inspect_action">Inspect</string>
+    <string name="main_error_title">Cyphr could not initialize secure storage</string>
+    <string name="main_retry">Retry</string>
+    <string name="main_error_hint">If the problem persists, clear app storage and restart.</string>
+
+    <!-- Share Public Key Sheet -->
+    <string name="share_sheet_title">Share public key</string>
+    <string name="share_sheet_qr">Show QR Code</string>
+    <string name="share_sheet_copy">Copy to clipboard</string>
+    <string name="share_sheet_share_via">Share via…</string>
+    <string name="share_label">Cyphr public key</string>
+    <string name="share_intent_title">Share public key</string>
+
+    <!-- QR Scanner -->
+    <string name="qr_title">Scan QR Code</string>
+    <string name="qr_cancel">Cancel</string>
+    <string name="qr_align_hint">Align QR code within the frame</string>
+    <string name="qr_permission_required">Camera permission is required to scan QR codes</string>
+    <string name="qr_open_settings">Open Settings</string>
+    <string name="qr_grant_permission">Grant permission</string>
+    <string name="qr_camera_error">Could not open camera</string>
+
+    <!-- Keyboard (Compose UI) -->
+    <string name="keyboard_to_label">To:</string>
+    <string name="keyboard_no_contact">— No contact —</string>
+    <string name="keyboard_encrypt_on">🔒 Encrypt ON</string>
+    <string name="keyboard_encrypt_off">✉️ Encrypt OFF</string>
+    <string name="keyboard_paste">Paste</string>
+    <string name="keyboard_type_hint">Type here…</string>
+    <string name="keyboard_show_alpha">ABC</string>
+    <string name="keyboard_show_symbols">\?123</string>
+    <string name="keyboard_back_to_keyboard">◀  ABC</string>
+
+    <!-- Keyboard Layout Names -->
+    <string name="layout_english">English</string>
+    <string name="layout_spanish">Español</string>
+    <string name="layout_german">Deutsch</string>
+    <string name="layout_french">Français</string>
+    <string name="layout_italian">Italiano</string>
+    <string name="layout_portuguese">Português</string>
+    <string name="layout_greek">Ελληνικά</string>
+    <string name="layout_russian">Русский</string>
+    <string name="layout_symbols">Symbols</string>
+
+    <!-- Decryption Overlay (Accessibility Service) -->
+    <string name="overlay_from">From: %s</string>
+    <string name="overlay_from_unknown">From: Unknown sender</string>
+
+    <!-- Quick Settings Tile -->
+    <string name="tile_label_active">Cyphr</string>
+    <string name="tile_label_inactive">Cyphr</string>
+
+    <!-- Contact Picker Activity -->
+    <string name="picker_title">Select Contact</string>
+    <string name="picker_cancel">Cancel</string>
+    <string name="picker_loading">Loading…</string>
+    <string name="picker_empty">No contacts found. Add contacts in Cyphr first.</string>
+    <string name="picker_none_encryption">None (disable encryption)</string>
+    <string name="picker_key_changed">⚠️ Key changed</string>
+    <string name="picker_verified">✔️ Verified</string>
+    <string name="picker_unverified">⚪ Unverified</string>
+    <string name="picker_save_error">Could not save selection: %s</string>
+
+    <!-- QR Code Display Screen -->
+    <string name="qr_code_title">QR Code</string>
+    <string name="qr_code_back">Back</string>
+    <string name="qr_code_image_desc">QR Code for public key</string>
+    <string name="qr_code_copied">Public key copied — clipboard will auto-clear in 30s</string>
+    <string name="qr_code_copy_button">Copy public key</string>
+    <string name="qr_code_share_via">Share via…</string>
+    <string name="qr_code_data_label">Public key data</string>
+    <string name="qr_code_generate_error">Could not generate QR code</string>
+
+    <!-- Inspect Payload (format parts) -->
+    <string name="inspect_from_prefix">From: %s%s\n</string>
+    <string name="inspect_counter_prefix">\nCounter: %d</string>
+    <string name="inspect_message_prefix">\nMessage: %s</string>
+
+    <!-- Clipboard labels -->
+    <string name="clipboard_cyphr_decoded">Cyphr decoded</string>
+</resources>

@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <style name="Theme.Cyphr" parent="android:Theme.Material.Light.NoActionBar" />
+
+    <style name="Theme.Cyphr.Dialog" parent="android:Theme.Material.Light.Dialog">
+        <item name="android:windowMinWidthMajor">85%</item>
+        <item name="android:windowMinWidthMinor">85%</item>
+    </style>
+</resources>
