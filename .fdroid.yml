@@ -1,0 +1,41 @@
+AutoName: Cyphr
+Description: |-
+    Cyphr encrypts your message on your Android device before you
+    send it through platforms such as Discord, Instagram, Telegram,
+    or any other messenger. The platform only receives encrypted
+    text. The person you are messaging can decrypt it with Cyphr.
+
+    Features:
+    - Encrypt messages for individual contacts
+    - Exchange keys with QR codes or copyable text
+    - Verify contact fingerprints
+    - Create multiple profiles and rotate keys
+    - Protect against replayed messages
+    - Store Cyphr data encrypted on your device
+    - Lock the app with biometrics
+    - Custom keyboard with eight language layouts
+    - On-screen decryption overlay
+    - No account, no ads, no internet permission
+WebSite: https://github.com/NekDevs/cyphr-android
+SourceCode: https://github.com/NekDevs/cyphr-android
+IssueTracker: https://github.com/NekDevs/cyphr-android/issues
+Donate: https://ko-fi.com/nekdevs
+Liberapay: nekdevs
+License: MIT
+
+RepoType: git
+Repo: https://github.com/NekDevs/cyphr-android
+
+Builds:
+  - versionName: 1.0.0
+    versionCode: 1
+    commit: v1.0.0
+    subdir: app
+    gradle:
+      - yes
+    output: build/outputs/apk/release/app-release-unsigned.apk
+
+AutoUpdateMode: Version v%v
+UpdateCheckMode: Tags
+CurrentVersion: 1.0.0
+CurrentVersionCode: 1
