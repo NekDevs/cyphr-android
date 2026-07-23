@@ -49,6 +49,9 @@ class CryptoViewModel : ViewModel() {
     fun switchProfile(context: Context, uuid: String): Boolean {
         if (uuid == activeProfileUuid) return true
         val keys = ProfileKeyManager.loadProfileKeys(context, uuid) ?: return false
+        val prevUuid = activeProfileUuid
+        val prevKeyset = profileKeysetBytes
+        val prevPubKey = profilePublicKeyBytes
         return try {
             activeProfileUuid = uuid
             profileKeysetBytes = keys
@@ -56,6 +59,9 @@ class CryptoViewModel : ViewModel() {
             persistActiveProfileUuid(context, uuid)
             true
         } catch (e: EncryptedStoreException) {
+            activeProfileUuid = prevUuid
+            profileKeysetBytes = prevKeyset
+            profilePublicKeyBytes = prevPubKey
             false
         }
     }

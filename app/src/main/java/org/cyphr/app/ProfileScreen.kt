@@ -5,7 +5,6 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
@@ -45,6 +44,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import org.cyphr.app.crypto.ProfileKeyManager.ProfileInfo
+import org.cyphr.app.ui.MaxWidthBox
 import org.cyphr.app.ui.theme.CyphrTheme
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -63,7 +63,7 @@ fun ProfileScreen(onNavigateBack: () -> Unit) {
     var deleteTarget by remember { mutableStateOf<ProfileInfo?>(null) }
 
     LaunchedEffect(refresh) {
-        profiles = CryptoState.listProfiles()
+        profiles = withContext(Dispatchers.IO) { CryptoState.listProfiles() }
         activeUuid = CryptoState.activeProfileUuid
     }
 
@@ -79,6 +79,7 @@ fun ProfileScreen(onNavigateBack: () -> Unit) {
             confirmButton = {
                 TextButton(onClick = {
                     showRotateConfirm = false
+                    @Suppress("LocalContextGetResourceValueCall")
                     scope.launch {
                         try {
                             val success = withContext(Dispatchers.IO) {
@@ -149,7 +150,7 @@ fun ProfileScreen(onNavigateBack: () -> Unit) {
                 val target = deleteTarget
                 Text(
                     if (target != null) {
-                        context.getString(R.string.profile_delete_body, target.displayName)
+                        stringResource(R.string.profile_delete_body, target.displayName)
                     } else ""
                 )
             },
@@ -188,13 +189,13 @@ fun ProfileScreen(onNavigateBack: () -> Unit) {
             )
         }
     ) { innerPadding ->
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(innerPadding)
-                .verticalScroll(rememberScrollState())
-                .padding(16.dp)
-        ) {
+        MaxWidthBox(modifier = Modifier.padding(innerPadding)) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .verticalScroll(rememberScrollState())
+                    .padding(16.dp)
+            ) {
             Text(
                 text = stringResource(R.string.profile_active_heading),
                 style = MaterialTheme.typography.titleMedium
@@ -210,17 +211,17 @@ fun ProfileScreen(onNavigateBack: () -> Unit) {
                         )
                         Spacer(modifier = Modifier.height(4.dp))
                         Text(
-                            text = context.getString(R.string.profile_id, activeProfile.uuid.take(8)),
+                            text = stringResource(R.string.profile_id, activeProfile.uuid.take(8)),
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                         Text(
-                            text = context.getString(R.string.profile_created, activeProfile.createdAt),
+                            text = stringResource(R.string.profile_created, activeProfile.createdAt),
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                         Text(
-                            text = context.getString(R.string.profile_key_epoch, activeProfile.keyEpoch),
+                            text = stringResource(R.string.profile_key_epoch, activeProfile.keyEpoch),
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
@@ -365,6 +366,7 @@ fun ProfileScreen(onNavigateBack: () -> Unit) {
                 textAlign = TextAlign.Center,
                 modifier = Modifier.fillMaxWidth()
             )
+            }
         }
     }
 }

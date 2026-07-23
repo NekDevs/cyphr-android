@@ -5,7 +5,6 @@ import android.provider.Settings
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
@@ -47,6 +46,7 @@ import android.view.accessibility.AccessibilityManager
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import org.cyphr.app.ui.MaxWidthBox
 import org.cyphr.app.ui.theme.CyphrTheme
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -102,13 +102,13 @@ fun SettingsScreen(
             )
         }
     ) { innerPadding ->
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(innerPadding)
-                .verticalScroll(rememberScrollState())
-                .padding(16.dp)
-        ) {
+        MaxWidthBox(modifier = Modifier.padding(innerPadding)) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .verticalScroll(rememberScrollState())
+                    .padding(16.dp)
+            ) {
             OutlinedCard(modifier = Modifier.fillMaxWidth()) {
                 Row(
                     modifier = Modifier
@@ -133,6 +133,7 @@ fun SettingsScreen(
                     Switch(
                         checked = biometricEnabled && biometricAvailable,
                         onCheckedChange = { enabled ->
+                            @Suppress("LocalContextGetResourceValueCall")
                             scope.launch {
                                 try {
                                     withContext(Dispatchers.IO) {
@@ -242,6 +243,7 @@ fun SettingsScreen(
                         }
                     }
                 }
+            }
             }
         }
     }

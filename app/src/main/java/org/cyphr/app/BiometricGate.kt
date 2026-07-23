@@ -1,14 +1,18 @@
 package org.cyphr.app
 
 import android.content.Context
+import android.util.Log
 import androidx.biometric.BiometricManager
 import androidx.biometric.BiometricPrompt
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.material3.Button
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -24,9 +28,9 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.unit.dp
 import androidx.compose.ui.text.style.TextAlign
 import androidx.lifecycle.compose.LocalLifecycleOwner
-import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
 import androidx.fragment.app.FragmentActivity
 import androidx.lifecycle.Lifecycle
@@ -56,6 +60,7 @@ fun BiometricGate(
         onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
     }
 
+    @Suppress("LocalContextGetResourceValueCall")
     LaunchedEffect(attempt) {
         val currentActivity = activity
         if (currentActivity == null || currentActivity.isFinishing || currentActivity.isDestroyed) return@LaunchedEffect
@@ -93,7 +98,8 @@ fun BiometricGate(
             .build()
         try {
             prompt.authenticate(promptInfo)
-        } catch (_: Exception) {
+        } catch (e: Exception) {
+            Log.w("CyphrBio", "BiometricGate authenticate failed: ${e.message}")
             isPromptShowing = false
         }
     }
@@ -103,35 +109,56 @@ fun BiometricGate(
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center
     ) {
-        Text(
-            text = stringResource(R.string.biometric_locked_title),
-            style = MaterialTheme.typography.headlineSmall
-        )
-        Spacer(modifier = Modifier.height(8.dp))
-        Text(
-            text = stringResource(R.string.biometric_locked_desc),
-            style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            textAlign = TextAlign.Center,
-            modifier = Modifier.padding(horizontal = 32.dp)
-        )
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .widthIn(max = 400.dp),
+            contentAlignment = Alignment.Center
+        ) {
+            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                Text(
+                    text = stringResource(R.string.biometric_locked_title),
+                    style = MaterialTheme.typography.headlineSmall
+                )
+                Spacer(modifier = Modifier.height(8.dp))
+                Text(
+                    text = stringResource(R.string.biometric_locked_desc),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    textAlign = TextAlign.Center
+                )
+            }
+        }
         val em = errorMessage
         if (em != null) {
             Spacer(modifier = Modifier.height(16.dp))
-            Text(
-                text = em,
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.error,
-                textAlign = TextAlign.Center,
-                modifier = Modifier.padding(horizontal = 32.dp)
-            )
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .widthIn(max = 400.dp),
+                contentAlignment = Alignment.Center
+            ) {
+                Text(
+                    text = em,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.error,
+                    textAlign = TextAlign.Center
+                )
+            }
         }
         Spacer(modifier = Modifier.height(24.dp))
-        Button(onClick = {
-            attempt++
-            errorMessage = null
-        }) {
-            Text(stringResource(R.string.biometric_retry))
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .widthIn(max = 400.dp),
+            contentAlignment = Alignment.Center
+        ) {
+            Button(onClick = {
+                attempt++
+                errorMessage = null
+            }) {
+                Text(stringResource(R.string.biometric_retry))
+            }
         }
     }
 }
@@ -144,6 +171,7 @@ fun isBiometricAvailable(context: Context): Boolean {
             BiometricManager.Authenticators.DEVICE_CREDENTIAL
         ) == BiometricManager.BIOMETRIC_SUCCESS
     } catch (_: Exception) {
+        Log.w("CyphrBio", "isBiometricAvailable failed")
         false
     }
 }
@@ -220,7 +248,8 @@ fun BiometricAuthTrigger(
             .build()
         try {
             prompt.authenticate(promptInfo)
-        } catch (_: Exception) {
+        } catch (e: Exception) {
+            Log.w("CyphrBio", "BiometricAuthTrigger authenticate failed: ${e.message}")
             isPromptShowing = false
         }
     }

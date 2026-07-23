@@ -29,6 +29,8 @@ import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.material3.ripple
 import androidx.compose.runtime.Composable
@@ -36,6 +38,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -44,17 +47,20 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.window.Popup
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalHapticFeedback
+import androidx.compose.ui.platform.LocalWindowInfo
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.platform.LocalViewConfiguration
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import kotlin.math.abs
+import androidx.compose.ui.unit.Dp
+import kotlin.math.roundToInt
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -99,6 +105,7 @@ data class KeyboardColors(
 
 val LocalKeyboardColors = staticCompositionLocalOf { darkKeyboardColors }
 val LocalLayoutVariants = staticCompositionLocalOf<Map<Char, List<Char>>> { emptyMap() }
+val LocalBufferState = staticCompositionLocalOf { "" }
 
 val darkKeyboardColors = KeyboardColors(
     bg = Color(0xFF1B1C1E),
@@ -126,18 +133,32 @@ val lightKeyboardColors = KeyboardColors(
     toolbarPill = Color(0xFFDADADA),
 )
 
-private val KEY_HEIGHT = 56.dp
-private val BOTTOM_H = 56.dp
-private val TOOLBAR_H = 60.dp
-private val PREVIEW_H = 48.dp
 private val H_PAD = 6.dp
 private val KEY_GAP = 6.dp
 private val ROW_GAP = 6.dp
 private val CORNER = 12.dp
 
 @Composable
+private fun currentScreenWidthDp(): Int {
+    val density = LocalDensity.current
+    val containerSize = LocalWindowInfo.current.containerSize
+    return with(density) { containerSize.width.toDp().value.roundToInt() }
+}
+
+private fun scaledKeyHeight(screenWidthDp: Int): Dp =
+    (screenWidthDp / 6.5f).dp.coerceIn(44.dp, 60.dp)
+
+private fun scaledToolbarHeight(screenWidthDp: Int): Dp =
+    (screenWidthDp / 6f).dp.coerceIn(48.dp, 64.dp)
+
+private fun scaledPreviewHeight(screenWidthDp: Int): Dp =
+    (screenWidthDp / 8f).dp.coerceIn(36.dp, 48.dp)
+
+private fun scaledEmojiPanelHeight(screenWidthDp: Int): Dp =
+    (screenWidthDp * 0.55f).dp.coerceIn(160.dp, 250.dp)
+
+@Composable
 fun KeyboardScreen(
-    buffer: String,
     selectedContact: ContactInfo?,
     availableContacts: List<ContactInfo>,
     currentLayout: KeyboardLayout,
@@ -159,7 +180,14 @@ fun KeyboardScreen(
     onToggleEncryptMode: () -> Unit,
     onCycleLanguage: () -> Unit,
     onCycleLanguageBackward: () -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    showDecryptPopup: Boolean = false,
+    decryptPayloadInput: String = "",
+    decryptResult: String? = null,
+    isDecrypting: Boolean = false,
+    onToggleDecryptPopup: () -> Unit = {},
+    onDecryptPayloadInputChange: (String) -> Unit = {},
+    onDecryptPayload: () -> Unit = {}
 ) {
     val colors = if (isSystemInDarkTheme()) darkKeyboardColors else lightKeyboardColors
 
@@ -178,10 +206,23 @@ fun KeyboardScreen(
             onDeselectContact = onDeselectContact,
             onPaste = onPaste,
             isEncryptMode = isEncryptMode,
-            onToggleEncryptMode = onToggleEncryptMode
+            onToggleEncryptMode = onToggleEncryptMode,
+            showDecryptPopup = showDecryptPopup,
+            onToggleDecryptPopup = onToggleDecryptPopup
         )
 
-        PreviewBar(buffer = buffer)
+        if (showDecryptPopup) {
+            DecryptPopupForm(
+                input = decryptPayloadInput,
+                onInputChange = onDecryptPayloadInputChange,
+                onDecrypt = onDecryptPayload,
+                isDecrypting = isDecrypting,
+                result = decryptResult,
+                onClose = onToggleDecryptPopup
+            )
+        }
+
+        PreviewBar()
 
         StatusBar(
             selectedContact = selectedContact,
@@ -218,7 +259,6 @@ fun KeyboardScreen(
 
                 BottomRow(
                     layout = currentLayout,
-                    bufferEmpty = buffer.isEmpty(),
                     hasContact = selectedContact != null,
                     isEncryptMode = isEncryptMode,
                     currentLanguageCode = currentLanguageCode,
@@ -244,15 +284,18 @@ private fun Toolbar(
     onDeselectContact: () -> Unit,
     onPaste: () -> Unit,
     isEncryptMode: Boolean,
-    onToggleEncryptMode: () -> Unit
+    onToggleEncryptMode: () -> Unit,
+    showDecryptPopup: Boolean = false,
+    onToggleDecryptPopup: () -> Unit = {}
 ) {
     val c = LocalKeyboardColors.current
+    val screenWidthDp = currentScreenWidthDp()
     var expanded by remember { mutableStateOf(false) }
 
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .height(TOOLBAR_H)
+            .height(scaledToolbarHeight(screenWidthDp))
             .padding(horizontal = 8.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
@@ -370,6 +413,25 @@ private fun Toolbar(
             )
         }
 
+        Spacer(Modifier.width(6.dp))
+
+        Box(
+            modifier = Modifier
+                .clip(RoundedCornerShape(20.dp))
+                .background(if (showDecryptPopup) c.encryptOn.copy(alpha = 0.15f) else c.toolbarPill)
+                .clickable(onClick = onToggleDecryptPopup)
+                .padding(horizontal = 12.dp, vertical = 10.dp),
+            contentAlignment = Alignment.Center
+        ) {
+            Text(
+                text = stringResource(R.string.keyboard_decrypt_label),
+                fontSize = 12.sp,
+                fontWeight = FontWeight.Medium,
+                color = if (showDecryptPopup) c.encryptOn else c.statusText,
+                textAlign = TextAlign.Center
+            )
+        }
+
         Spacer(Modifier.weight(1f))
 
         Box(
@@ -392,13 +454,100 @@ private fun Toolbar(
 }
 
 @Composable
-private fun PreviewBar(buffer: String) {
+private fun DecryptPopupForm(
+    input: String,
+    onInputChange: (String) -> Unit,
+    onDecrypt: () -> Unit,
+    isDecrypting: Boolean,
+    result: String?,
+    onClose: () -> Unit
+) {
     val c = LocalKeyboardColors.current
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = H_PAD)
+            .clip(RoundedCornerShape(CORNER))
+            .background(c.previewBg)
+            .padding(10.dp)
+    ) {
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            OutlinedTextField(
+                value = input,
+                onValueChange = onInputChange,
+                placeholder = { Text(stringResource(R.string.keyboard_decrypt_hint), fontSize = 13.sp) },
+                modifier = Modifier.weight(1f),
+                singleLine = true,
+                textStyle = TextStyle(fontSize = 13.sp, color = c.keyText)
+            )
+            Box(
+                modifier = Modifier
+                    .clip(RoundedCornerShape(CORNER))
+                    .background(if (input.isBlank()) c.keySpecial else c.encryptOn)
+                    .clickable(enabled = input.isNotBlank() && !isDecrypting) { onDecrypt() }
+                    .padding(horizontal = 14.dp, vertical = 10.dp),
+                contentAlignment = Alignment.Center
+            ) {
+                if (isDecrypting) {
+                    CircularProgressIndicator(
+                        modifier = Modifier.size(18.dp),
+                        strokeWidth = 2.dp,
+                        color = c.keyText
+                    )
+                } else {
+                    Text(
+                        text = stringResource(R.string.keyboard_decrypt_label),
+                        fontSize = 14.sp,
+                        fontWeight = FontWeight.Medium,
+                        color = if (input.isBlank()) c.statusText else Color.White
+                    )
+                }
+            }
+        }
+        if (result != null) {
+            Spacer(Modifier.height(6.dp))
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text(
+                    text = result,
+                    fontSize = 13.sp,
+                    color = if (result.startsWith("Decrypted:")) c.encryptOn else Color(0xFFEF5350),
+                    modifier = Modifier.weight(1f),
+                    maxLines = 3,
+                    overflow = TextOverflow.Ellipsis
+                )
+                Spacer(Modifier.width(8.dp))
+                Box(
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(8.dp))
+                        .background(c.keySpecial)
+                        .clickable(onClick = onClose)
+                        .padding(horizontal = 10.dp, vertical = 6.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(
+                        text = "\u2716",
+                        fontSize = 12.sp,
+                        color = c.statusText
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun PreviewBar() {
+    val buffer = LocalBufferState.current
+    val c = LocalKeyboardColors.current
+    val screenWidthDp = currentScreenWidthDp()
     val scrollState = rememberScrollState()
     Box(
         modifier = Modifier
             .fillMaxWidth()
-            .height(PREVIEW_H)
+            .height(scaledPreviewHeight(screenWidthDp))
             .padding(horizontal = H_PAD)
             .clip(RoundedCornerShape(8.dp))
             .background(c.previewBg)
@@ -472,6 +621,8 @@ private fun KeyRow(
     onKeyPress: (String) -> Unit,
     inset: Boolean
 ) {
+    val screenWidthDp = currentScreenWidthDp()
+    val kh = scaledKeyHeight(screenWidthDp)
     Row(
         modifier = Modifier.fillMaxWidth(),
         verticalAlignment = Alignment.CenterVertically,
@@ -485,7 +636,8 @@ private fun KeyRow(
             KeyButton(
                 label = c.toString(),
                 onSelectKey = onKeyPress,
-                modifier = Modifier.weight(1f / totalWeight)
+                modifier = Modifier.weight(1f / totalWeight),
+                keyHeight = kh
             )
         }
         if (inset) {
@@ -505,8 +657,10 @@ private fun Row3(
 ) {
     val c = LocalKeyboardColors.current
     val haptic = LocalHapticFeedback.current
+    val screenWidthDp = currentScreenWidthDp()
     val shifted = isShifted && !layout.isSymbols
     val keys = if (shifted) layout.row3.uppercase() else layout.row3
+    val kh = scaledKeyHeight(screenWidthDp)
 
     Row(
         modifier = Modifier.fillMaxWidth(),
@@ -519,7 +673,7 @@ private fun Row3(
             Box(
                 modifier = Modifier
                     .weight(1.5f / totalWeight)
-                    .height(KEY_HEIGHT)
+                    .height(kh)
                     .clip(RoundedCornerShape(CORNER))
                     .background(if (isCapsLock) c.lavender else if (isShifted) c.keyChar else c.keySpecial)
                     .clickable {
@@ -552,6 +706,7 @@ private fun Row3(
             label = "\u232B",
             onTap = onBackspace,
             onRepeat = onBackspace,
+            keyHeight = kh,
             modifier = Modifier.weight(1.5f / totalWeight)
         )
     }
@@ -560,7 +715,6 @@ private fun Row3(
 @Composable
 private fun BottomRow(
     layout: KeyboardLayout,
-    bufferEmpty: Boolean,
     hasContact: Boolean,
     isEncryptMode: Boolean,
     currentLanguageCode: String,
@@ -573,7 +727,11 @@ private fun BottomRow(
 ) {
     val c = LocalKeyboardColors.current
     val haptic = LocalHapticFeedback.current
+    val screenWidthDp = currentScreenWidthDp()
+    val bh = scaledKeyHeight(screenWidthDp)
     val totalWeight = 9f
+    val currentOnCycleLanguage by rememberUpdatedState(onCycleLanguage)
+    val currentOnCycleLanguageBackward by rememberUpdatedState(onCycleLanguageBackward)
     val canEncrypt = if (isEncryptMode) hasContact else true
     val langLabel = if (layout.isSymbols) stringResource(R.string.keyboard_show_alpha) else stringResource(R.string.keyboard_show_symbols)
 
@@ -585,7 +743,7 @@ private fun BottomRow(
         Box(
             modifier = Modifier
                 .weight(1.5f / totalWeight)
-                .height(BOTTOM_H)
+                .height(bh)
                 .clip(RoundedCornerShape(CORNER))
                 .background(c.lavender)
                 .clickable {
@@ -606,7 +764,7 @@ private fun BottomRow(
         Box(
             modifier = Modifier
                 .weight(1f / totalWeight)
-                .height(BOTTOM_H)
+                .height(bh)
                 .clip(RoundedCornerShape(CORNER))
                 .background(c.keyChar)
                 .combinedClickable(
@@ -637,10 +795,10 @@ private fun BottomRow(
         Box(
             modifier = Modifier
                 .weight(4f / totalWeight)
-                .height(BOTTOM_H)
+                .height(bh)
                 .clip(RoundedCornerShape(CORNER))
                 .background(c.keyChar)
-                .pointerInput(onCycleLanguage, onCycleLanguageBackward) {
+                .pointerInput(Unit) {
                     var accumulatedDrag = 0f
                     detectHorizontalDragGestures(
                         onDragStart = { accumulatedDrag = 0f },
@@ -651,10 +809,10 @@ private fun BottomRow(
                         onDragEnd = {
                             if (accumulatedDrag > 0) {
                                 haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                                onCycleLanguage()
+                                currentOnCycleLanguage()
                             } else if (accumulatedDrag < 0) {
                                 haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                                onCycleLanguageBackward()
+                                currentOnCycleLanguageBackward()
                             }
                         }
                     )
@@ -689,7 +847,7 @@ private fun BottomRow(
         Box(
             modifier = Modifier
                 .weight(1.5f / totalWeight)
-                .height(BOTTOM_H)
+                .height(bh)
                 .clip(CircleShape)
                 .background(
                     if (canEncrypt) {
@@ -718,7 +876,8 @@ private fun BottomRow(
 private fun KeyButton(
     label: String,
     onSelectKey: (String) -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    keyHeight: Dp = 56.dp
 ) {
     val c = LocalKeyboardColors.current
     val layoutVariants = LocalLayoutVariants.current
@@ -733,7 +892,7 @@ private fun KeyButton(
 
     Box(
         modifier = modifier
-            .height(KEY_HEIGHT)
+            .height(keyHeight)
             .clip(RoundedCornerShape(CORNER))
             .background(c.keyChar)
             .combinedClickable(
@@ -796,35 +955,12 @@ private fun KeyButton(
 }
 
 @Composable
-private fun SpecialKey(
-    label: String,
-    onClick: () -> Unit,
-    modifier: Modifier = Modifier
-) {
-    val c = LocalKeyboardColors.current
-    Box(
-        modifier = modifier
-            .height(KEY_HEIGHT)
-            .clip(RoundedCornerShape(CORNER))
-            .background(c.keySpecial)
-            .clickable(onClick = onClick),
-        contentAlignment = Alignment.Center
-    ) {
-        Text(
-            text = label,
-            fontSize = 21.sp,
-            color = c.keyText,
-            textAlign = TextAlign.Center
-        )
-    }
-}
-
-@Composable
 private fun RepeatableSpecialKey(
     label: String,
     onTap: () -> Unit,
     onRepeat: () -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    keyHeight: Dp = 56.dp
 ) {
     val c = LocalKeyboardColors.current
     val haptic = LocalHapticFeedback.current
@@ -833,11 +969,11 @@ private fun RepeatableSpecialKey(
 
     Box(
         modifier = modifier
-            .height(KEY_HEIGHT)
+            .height(keyHeight)
             .clip(RoundedCornerShape(CORNER))
             .background(c.keySpecial)
             .indication(interactionSource, ripple())
-            .pointerInput(Unit) {
+            .pointerInput(onTap, onRepeat) {
                 detectTapGestures(
                     onPress = { offset ->
                         val press = PressInteraction.Press(offset)
@@ -880,6 +1016,7 @@ private fun EmojiPanel(
 ) {
     val c = LocalKeyboardColors.current
     val haptic = LocalHapticFeedback.current
+    val screenWidthDp = currentScreenWidthDp()
     Column(
         modifier = Modifier
             .fillMaxWidth()
@@ -889,11 +1026,11 @@ private fun EmojiPanel(
             columns = GridCells.Fixed(6),
             modifier = Modifier
                 .fillMaxWidth()
-                .height(200.dp),
+                .height(scaledEmojiPanelHeight(screenWidthDp)),
             verticalArrangement = Arrangement.spacedBy(2.dp),
             horizontalArrangement = Arrangement.spacedBy(2.dp)
         ) {
-            items(COMMON_EMOJIS) { emoji ->
+            items(COMMON_EMOJIS, key = { it }) { emoji ->
                 Box(
                     modifier = Modifier
                         .aspectRatio(1f)

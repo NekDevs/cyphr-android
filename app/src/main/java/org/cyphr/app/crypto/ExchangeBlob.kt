@@ -1,6 +1,7 @@
 package org.cyphr.app.crypto
 
 import android.util.Base64
+import android.util.Log
 import java.security.MessageDigest
 
 object ExchangeBlob {
@@ -9,6 +10,7 @@ object ExchangeBlob {
     const val ALGORITHM_TAG = "HPKE-X25519-AES256GCM"
 
     fun build(publicKeyBytes: ByteArray, keyEpoch: Int): String {
+        require(keyEpoch in 0..65535) { "keyEpoch must fit in uint16, got $keyEpoch" }
         val tagBytes = ALGORITHM_TAG.toByteArray(Charsets.UTF_8)
         val raw = ByteArray(1 + 1 + tagBytes.size + 2 + 2 + publicKeyBytes.size)
         var off = 0
@@ -33,19 +35,23 @@ object ExchangeBlob {
     fun parse(encoded: String): ParsedBlob? {
         return try {
             val raw = Base64.decode(encoded, Base64.URL_SAFE or Base64.NO_PADDING)
+            if (raw.size < 6) return null
             var off = 0
             val version = raw[off++].toInt() and 0xFF
             if (version != 1) return null
             val tagLen = raw[off++].toInt() and 0xFF
+            if (raw.size < off + tagLen + 4) return null
             val tag = raw.copyOfRange(off, off + tagLen).decodeToString()
             off += tagLen
             val epoch = ((raw[off].toInt() and 0xFF) shl 8) or (raw[off + 1].toInt() and 0xFF)
             off += 2
             val keyLen = ((raw[off].toInt() and 0xFF) shl 8) or (raw[off + 1].toInt() and 0xFF)
+            if (raw.size < off + 2 + keyLen) return null
             off += 2
             val key = raw.copyOfRange(off, off + keyLen)
             ParsedBlob(version, tag, epoch, key)
-        } catch (_: Exception) {
+        } catch (e: Exception) {
+            Log.w("CyphrBlob", "parse failed: ${e.message}")
             null
         }
     }

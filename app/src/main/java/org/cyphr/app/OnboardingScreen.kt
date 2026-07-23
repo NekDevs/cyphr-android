@@ -104,6 +104,7 @@ fun OnboardingScreen(onComplete: () -> Unit) {
         ) {
             if (pagerState.currentPage < pages.lastIndex) {
                 TextButton(onClick = {
+                    @Suppress("LocalContextGetResourceValueCall")
                     scope.launch {
                         onboardingError = null
                         if (completeOnboarding()) {
@@ -128,7 +129,7 @@ fun OnboardingScreen(onComplete: () -> Unit) {
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(bottom = 48.dp, start = 16.dp, end = 16.dp),
+                .padding(bottom = 32.dp, start = 16.dp, end = 16.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -147,11 +148,12 @@ fun OnboardingScreen(onComplete: () -> Unit) {
                 }
             }
 
-            Spacer(modifier = Modifier.height(32.dp))
+            Spacer(modifier = Modifier.height(24.dp))
 
             if (pagerState.currentPage == pages.lastIndex) {
                 val error = onboardingError
                 Button(onClick = {
+                    @Suppress("LocalContextGetResourceValueCall")
                     scope.launch {
                         onboardingError = null
                         if (completeOnboarding()) {
@@ -183,7 +185,7 @@ private fun OnboardingPage(data: OnboardingPageData) {
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .padding(horizontal = 32.dp),
+            .padding(horizontal = 24.dp),
         contentAlignment = Alignment.Center
     ) {
         OutlinedCard(

@@ -1,9 +1,12 @@
 package org.cyphr.app.crypto
 
 import android.content.Context
+import android.util.Log
+import org.cyphr.app.crypto.EncryptedStoreException
 import org.json.JSONObject
 import java.io.File
 private fun JSONObject.optStringOrNull(name: String): String? {
+    if (isNull(name)) return null
     val value = optString(name, "")
     return if (value.isEmpty()) null else value
 }
@@ -44,7 +47,11 @@ object MessageLogStore {
             put("keyEpoch", message.keyEpoch)
             put("isOutgoing", message.isOutgoing)
         }
-        EncryptedStore.writeText(context, File(dir, "${message.messageId}.json"), json.toString())
+        try {
+            EncryptedStore.writeText(context, File(dir, "${message.messageId}.json"), json.toString())
+        } catch (e: EncryptedStoreException) {
+            Log.w("CyphrLog", "saveMessage failed: ${e.message}")
+        }
     }
 
     fun loadMessages(context: Context, profileUuid: String): List<StoredMessage> {
@@ -71,6 +78,7 @@ object MessageLogStore {
                         isOutgoing = json.optBoolean("isOutgoing", false)
                     )
                 } catch (_: Exception) {
+                    Log.w("CyphrLog", "loadMessages JSON parse failed for ${file.name}")
                     null
                 }
             }

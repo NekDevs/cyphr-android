@@ -3,7 +3,6 @@ package org.cyphr.app
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
@@ -47,6 +46,7 @@ import kotlinx.coroutines.withContext
 import org.cyphr.app.crypto.EncryptedStoreException
 import org.cyphr.app.crypto.MessageLogStore
 import org.cyphr.app.crypto.StoredMessage
+import org.cyphr.app.ui.MaxWidthBox
 import org.cyphr.app.ui.theme.CyphrTheme
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -96,54 +96,55 @@ fun MessageLogScreen(onNavigateBack: () -> Unit) {
             )
         }
     ) { innerPadding ->
-        if (messages.isEmpty()) {
-            Column(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(innerPadding)
-                    .padding(16.dp),
-                horizontalAlignment = androidx.compose.ui.Alignment.CenterHorizontally
-            ) {
-                Spacer(modifier = Modifier.height(48.dp))
-                Text(
-                    text = stringResource(R.string.log_empty_title),
-                    style = MaterialTheme.typography.bodyLarge,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    textAlign = TextAlign.Center
-                )
-                Spacer(modifier = Modifier.height(8.dp))
-                Text(
-                    text = stringResource(R.string.log_empty_desc),
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    textAlign = TextAlign.Center
-                )
-            }
-        } else {
-            LazyColumn(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(innerPadding)
-                    .padding(16.dp)
-            ) {
-                items(messages, key = { it.messageId }) { msg ->
-                    MessageCard(
-                        message = msg,
-                        onClick = { selectedMessage = msg },
-                        onDelete = {
-                            scope.launch {
-                                try {
-                                    withContext(Dispatchers.IO) {
-                                        MessageLogStore.deleteMessage(context, msg.profileUuid, msg.messageId)
-                                    }
-                                    loadMessages()
-                                } catch (e: EncryptedStoreException) {
-                                    snackbarHostState.showSnackbar(context.getString(R.string.log_delete_error, e.message))
-                                }
-                            }
-                        }
+        MaxWidthBox(modifier = Modifier.padding(innerPadding)) {
+            if (messages.isEmpty()) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(16.dp),
+                    horizontalAlignment = androidx.compose.ui.Alignment.CenterHorizontally
+                ) {
+                    Spacer(modifier = Modifier.height(48.dp))
+                    Text(
+                        text = stringResource(R.string.log_empty_title),
+                        style = MaterialTheme.typography.bodyLarge,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        textAlign = TextAlign.Center
                     )
                     Spacer(modifier = Modifier.height(8.dp))
+                    Text(
+                        text = stringResource(R.string.log_empty_desc),
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        textAlign = TextAlign.Center
+                    )
+                }
+            } else {
+                LazyColumn(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(16.dp)
+                ) {
+                    items(messages, key = { it.messageId }) { msg ->
+                        MessageCard(
+                            message = msg,
+                            onClick = { selectedMessage = msg },
+                            onDelete = {
+                                @Suppress("LocalContextGetResourceValueCall")
+                                scope.launch {
+                                    try {
+                                        withContext(Dispatchers.IO) {
+                                            MessageLogStore.deleteMessage(context, msg.profileUuid, msg.messageId)
+                                        }
+                                        loadMessages()
+                                    } catch (e: EncryptedStoreException) {
+                                        snackbarHostState.showSnackbar(context.getString(R.string.log_delete_error, e.message))
+                                    }
+                                }
+                            }
+                        )
+                        Spacer(modifier = Modifier.height(8.dp))
+                    }
                 }
             }
         }
@@ -176,8 +177,8 @@ private fun MessageCard(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(
-                    text = if (message.isOutgoing) context.getString(R.string.log_to_prefix, message.senderDisplayName ?: context.getString(R.string.log_unknown))
-                           else (message.senderDisplayName ?: context.getString(R.string.log_unknown_sender)),
+                    text = if (message.isOutgoing) stringResource(R.string.log_to_prefix, message.senderDisplayName ?: stringResource(R.string.log_unknown))
+                           else (message.senderDisplayName ?: stringResource(R.string.log_unknown_sender)),
                     style = MaterialTheme.typography.titleSmall,
                     modifier = Modifier.weight(1f)
                 )
@@ -218,34 +219,34 @@ private fun MessageDetailDialog(
         onDismissRequest = onDismiss,
         title = {
             Text(
-                if (message.isOutgoing) context.getString(R.string.log_to_prefix, message.senderDisplayName ?: context.getString(R.string.log_unknown))
-                else (message.senderDisplayName ?: context.getString(R.string.log_unknown_sender))
+                if (message.isOutgoing) stringResource(R.string.log_to_prefix, message.senderDisplayName ?: stringResource(R.string.log_unknown))
+                else (message.senderDisplayName ?: stringResource(R.string.log_unknown_sender))
             )
         },
         text = {
             Column {
                 if (message.senderFingerprint != null) {
                     Text(
-                        text = context.getString(R.string.log_fingerprint, message.senderFingerprint),
+                        text = stringResource(R.string.log_fingerprint, message.senderFingerprint),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
                 Spacer(modifier = Modifier.height(4.dp))
                 Text(
-                    text = context.getString(R.string.log_counter, message.replayCounter),
+                    text = stringResource(R.string.log_counter, message.replayCounter),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
                 Text(
-                    text = context.getString(R.string.log_key_epoch, message.keyEpoch),
+                    text = stringResource(R.string.log_key_epoch, message.keyEpoch),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
                 Spacer(modifier = Modifier.height(4.dp))
                 Text(
-                    text = if (message.isOutgoing) context.getString(R.string.log_sent_prefix, message.decryptedAt)
-                           else context.getString(R.string.log_decrypted_prefix, message.decryptedAt),
+                    text = if (message.isOutgoing) stringResource(R.string.log_sent_prefix, message.decryptedAt)
+                           else stringResource(R.string.log_decrypted_prefix, message.decryptedAt),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )

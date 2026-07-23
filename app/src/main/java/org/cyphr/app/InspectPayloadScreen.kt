@@ -8,7 +8,6 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
@@ -64,12 +63,14 @@ import org.cyphr.app.crypto.ProfileKeyManager
 import org.cyphr.app.crypto.ReplayProtectionStore
 import org.cyphr.app.crypto.SenderResolution
 import org.cyphr.app.crypto.StoredMessage
+import org.cyphr.app.ui.MaxWidthBox
 import org.cyphr.app.ui.theme.CyphrTheme
-import java.text.SimpleDateFormat
 import java.util.Date
-import java.util.Locale
-import java.util.TimeZone
 import java.util.UUID
+
+private val ISO_8601 = java.text.SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss'Z'", java.util.Locale.US).apply {
+    timeZone = java.util.TimeZone.getTimeZone("UTC")
+}
 
 private data class InspectResult(
     val decoded: DecodedPayload?,
@@ -99,6 +100,7 @@ fun InspectPayloadScreen(onNavigateBack: () -> Unit) {
     val scope = rememberCoroutineScope()
     var autoClearJob by remember { mutableStateOf<Job?>(null) }
 
+    @Suppress("LocalContextGetResourceValueCall")
     suspend fun performInspect() {
         if (payloadInput.isBlank()) {
             inspectResult = null
@@ -231,9 +233,11 @@ fun InspectPayloadScreen(onNavigateBack: () -> Unit) {
                 ""
             }
             val senderBlock = if (result.decryptingProfileUuid != null) {
-                val res = ContactKeyStore.resolveSender(
-                    context, result.decryptingProfileUuid, decoded.senderPublicKeyBytes
-                )
+                val res = withContext(Dispatchers.IO) {
+                    ContactKeyStore.resolveSender(
+                        context, result.decryptingProfileUuid, decoded.senderPublicKeyBytes
+                    )
+                }
                 when (res) {
                     is SenderResolution.KnownContact -> {
                         val qualifier = when {
@@ -267,14 +271,16 @@ fun InspectPayloadScreen(onNavigateBack: () -> Unit) {
 
     if (showSaveContactDialog) {
         lastDecoded?.let { decoded ->
-            val defaultName = lastSenderFingerprint?.let { context.getString(R.string.contacts_name_template, it) } ?: ""
+            val fp = lastSenderFingerprint
+            val defaultName = if (fp != null) stringResource(R.string.contacts_name_template, fp) else ""
+            val myBlobForClipboard = remember { CryptoState.getMyExchangeBlob() }
             AlertDialog(
             onDismissRequest = { showSaveContactDialog = false },
             title = { Text(stringResource(R.string.inspect_save_sender_title)) },
             text = {
                 Column {
                     Text(
-                        text = context.getString(R.string.inspect_sender_fingerprint, lastSenderFingerprint ?: ""),
+                        text = stringResource(R.string.inspect_sender_fingerprint, lastSenderFingerprint ?: ""),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -305,16 +311,19 @@ fun InspectPayloadScreen(onNavigateBack: () -> Unit) {
                             fingerprint = org.cyphr.app.crypto.ExchangeBlob.fingerprint(senderKey),
                             verificationStatus = "unverified"
                         )
-                        CryptoState.getMyExchangeBlob()?.let { myBlob ->
+                        myBlobForClipboard?.let { myBlob ->
                             val cm = context.getSystemService(Context.CLIPBOARD_SERVICE) as? ClipboardManager
                             cm?.setPrimaryClip(
-                                ClipData.newPlainText(context.getString(R.string.share_label), myBlob).markSensitiveIfSupported()
+                                @Suppress("LocalContextGetResourceValueCall")
+                            ClipData.newPlainText(context.getString(R.string.share_label), myBlob).markSensitiveIfSupported()
                             )
                         }
                         showSaveContactDialog = false
                         contactNameInput = ""
+                        @Suppress("LocalContextGetResourceValueCall")
                         scope.launch { snackbarHostState.showSnackbar(context.getString(R.string.contacts_saved)) }
                     } catch (e: Exception) {
+                        @Suppress("LocalContextGetResourceValueCall")
                         scope.launch { snackbarHostState.showSnackbar(context.getString(R.string.contacts_save_error, e.message)) }
                     }
                 }) {
@@ -349,14 +358,14 @@ fun InspectPayloadScreen(onNavigateBack: () -> Unit) {
             )
         }
     ) { innerPadding ->
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(innerPadding)
-                .verticalScroll(rememberScrollState())
-                .imePadding()
-                .padding(16.dp)
-        ) {
+        MaxWidthBox(modifier = Modifier.padding(innerPadding)) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .verticalScroll(rememberScrollState())
+                    .imePadding()
+                    .padding(16.dp)
+            ) {
             OutlinedTextField(
                 value = payloadInput,
                 onValueChange = { payloadInput = it },
@@ -370,6 +379,7 @@ fun InspectPayloadScreen(onNavigateBack: () -> Unit) {
 
             OutlinedButton(
                 onClick = {
+                    @Suppress("LocalContextGetResourceValueCall")
                     scope.launch {
                         try {
                             val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as? ClipboardManager
@@ -439,12 +449,14 @@ fun InspectPayloadScreen(onNavigateBack: () -> Unit) {
                             TextButton(
                                 onClick = {
                                     val messageText = lastDecoded?.messageText?.decodeToString() ?: inspectResult
+                                    @Suppress("LocalContextGetResourceValueCall")
                                     val clip = ClipData.newPlainText(context.getString(R.string.clipboard_cyphr_decoded), messageText)
                                         .markSensitiveIfSupported()
                                     val cm = context.getSystemService(Context.CLIPBOARD_SERVICE) as? ClipboardManager
                                     cm?.setPrimaryClip(clip)
                                     autoClearJob?.cancel()
                                     autoClearJob = scope.launch {
+                                        @Suppress("LocalContextGetResourceValueCall")
                                         snackbarHostState.showSnackbar(context.getString(R.string.inspect_copied))
                                         delay(30_000L)
                                         val cm = context.getSystemService(Context.CLIPBOARD_SERVICE) as? ClipboardManager
@@ -465,9 +477,6 @@ fun InspectPayloadScreen(onNavigateBack: () -> Unit) {
                                                     ProfileKeyManager.loadProfileMetadata(context, profileUuid)
                                                 }
                                                 val epoch = epochMeta?.optInt("keyEpoch", 1) ?: 1
-                                                val sdf = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss'Z'", Locale.US).apply {
-                                                    timeZone = TimeZone.getTimeZone("UTC")
-                                                }
                                                 val msg = StoredMessage(
                                                     messageId = UUID.randomUUID().toString(),
                                                     profileUuid = profileUuid,
@@ -477,14 +486,16 @@ fun InspectPayloadScreen(onNavigateBack: () -> Unit) {
                                                     replayCounter = decoded.replayCounter,
                                                     messageText = decoded.messageText.decodeToString(),
                                                     rawPayload = payloadInput,
-                                                    decryptedAt = sdf.format(Date()),
+                                                    decryptedAt = ISO_8601.format(Date()),
                                                     keyEpoch = epoch
                                                 )
                                                 withContext(Dispatchers.IO) {
                                                     MessageLogStore.saveMessage(context, msg)
                                                 }
+                                                @Suppress("LocalContextGetResourceValueCall")
                                                 snackbarHostState.showSnackbar(context.getString(R.string.inspect_message_saved))
                                             } catch (e: Exception) {
+                                                @Suppress("LocalContextGetResourceValueCall")
                                                 snackbarHostState.showSnackbar(context.getString(R.string.transform_save_error, e.message))
                                             }
                                         }
@@ -527,6 +538,7 @@ fun InspectPayloadScreen(onNavigateBack: () -> Unit) {
             )
 
             Spacer(modifier = Modifier.height(16.dp))
+            }
         }
     }
 }

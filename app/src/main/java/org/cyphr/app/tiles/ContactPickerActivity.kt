@@ -67,6 +67,7 @@ class ContactPickerActivity : ComponentActivity() {
                         )
                         finish()
                     } catch (e: EncryptedStoreException) {
+                        @Suppress("LocalContextGetResourceValueCall")
                         Toast.makeText(this@ContactPickerActivity, getString(R.string.picker_save_error, e.message), Toast.LENGTH_LONG).show()
                     }
                 }
@@ -138,6 +139,7 @@ private fun ContactPickerContent(
                                 }
                                 onDismiss()
                             } catch (e: EncryptedStoreException) {
+                                @Suppress("LocalContextGetResourceValueCall")
                                 Toast.makeText(context, context.getString(R.string.picker_save_error, e.message), Toast.LENGTH_LONG).show()
                             }
                         }
@@ -147,7 +149,7 @@ private fun ContactPickerContent(
                     Text(stringResource(R.string.picker_none_encryption))
                 }
                 LazyColumn {
-                    items(contacts) { contact ->
+                    items(contacts, key = { it.contactUuid }) { contact ->
                         Row(
                             modifier = Modifier
                                 .fillMaxWidth()

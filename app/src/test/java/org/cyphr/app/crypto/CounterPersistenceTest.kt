@@ -8,7 +8,6 @@ import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
-import kotlin.io.path.createTempDirectory
 
 @RunWith(RobolectricTestRunner::class)
 class CounterPersistenceTest {
@@ -35,7 +34,7 @@ class CounterPersistenceTest {
     fun countersAbsentByDefault() {
         val counters = store.loadCounters(profileUuid, contactUuid)
         assertEquals(0, counters.sendCounter)
-        assertEquals(0, counters.receiveCounter)
+        assertEquals(-1, counters.receiveCounter)
     }
 
     @Test

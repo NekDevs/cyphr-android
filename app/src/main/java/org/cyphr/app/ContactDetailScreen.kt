@@ -2,7 +2,6 @@ package org.cyphr.app
 
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
@@ -48,6 +47,7 @@ import kotlinx.coroutines.withContext
 import org.cyphr.app.crypto.ContactKeyMeta
 import org.cyphr.app.crypto.ContactKeyStore
 import org.cyphr.app.crypto.ExchangeBlob
+import org.cyphr.app.ui.MaxWidthBox
 import org.cyphr.app.ui.theme.CyphrTheme
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -111,6 +111,7 @@ fun ContactDetailScreen(
             text = { Text(stringResource(R.string.contact_detail_delete_body)) },
             confirmButton = {
                 TextButton(onClick = {
+                    @Suppress("LocalContextGetResourceValueCall")
                     scope.launch {
                         try {
                             withContext(Dispatchers.IO) {
@@ -148,13 +149,13 @@ fun ContactDetailScreen(
             )
         }
     ) { innerPadding ->
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(innerPadding)
-                .verticalScroll(rememberScrollState())
-                .padding(16.dp)
-        ) {
+        MaxWidthBox(modifier = Modifier.padding(innerPadding)) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .verticalScroll(rememberScrollState())
+                    .padding(16.dp)
+            ) {
             val c = contact
             if (c == null) {
                 Text(
@@ -208,8 +209,8 @@ fun ContactDetailScreen(
                         )
                         Spacer(modifier = Modifier.height(4.dp))
                         Text(
-                            text = context.getString(R.string.contact_detail_key_changed_desc) +
-                                    if (c.status == "verified") " " + context.getString(R.string.contact_detail_verify_first) else "",
+                            text = stringResource(R.string.contact_detail_key_changed_desc) +
+                                    if (c.status == "verified") " " + stringResource(R.string.contact_detail_verify_first) else "",
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onErrorContainer
                         )
@@ -244,16 +245,17 @@ fun ContactDetailScreen(
                     Spacer(modifier = Modifier.height(8.dp))
 
                     Button(
-                        onClick = {
-                            val result = ExchangeBlob.parse(updateBlobInput.trim())
-                            if (result != null) {
-                                parsedUpdateBlob = result
-                                updateParseError = null
-                            } else {
-                                parsedUpdateBlob = null
-                                updateParseError = context.getString(R.string.contact_detail_invalid_key)
-                            }
-                        },
+                            onClick = {
+                                val result = ExchangeBlob.parse(updateBlobInput.trim())
+                                if (result != null) {
+                                    parsedUpdateBlob = result
+                                    updateParseError = null
+                                } else {
+                                    parsedUpdateBlob = null
+                                    @Suppress("LocalContextGetResourceValueCall")
+                                    updateParseError = context.getString(R.string.contact_detail_invalid_key)
+                                }
+                            },
                         enabled = updateBlobInput.isNotBlank(),
                         modifier = Modifier.fillMaxWidth()
                     ) {
@@ -273,8 +275,8 @@ fun ContactDetailScreen(
                     val pub = parsedUpdateBlob
                     if (pub != null) {
                         val blob = pub
-                        val newFp = ExchangeBlob.fingerprint(blob.publicKeyBytes)
-                        val newShort = ExchangeBlob.shortFingerprint(blob.publicKeyBytes)
+                        val newFp = remember(blob) { ExchangeBlob.fingerprint(blob.publicKeyBytes) }
+                        val newShort = remember(blob) { ExchangeBlob.shortFingerprint(blob.publicKeyBytes) }
 
                         Spacer(modifier = Modifier.height(12.dp))
 
@@ -290,12 +292,13 @@ fun ContactDetailScreen(
                                     style = MaterialTheme.typography.titleLarge
                                 )
                                 Spacer(modifier = Modifier.height(8.dp))
+                                val chunkedNewFp = remember(newFp) { newFp.chunked(4).joinToString(" ") }
                                 Text(
-                                    text = newFp.chunked(4).joinToString(" "),
+                                    text = chunkedNewFp,
                                     style = MaterialTheme.typography.bodySmall
                                 )
                                     Text(
-                                        text = context.getString(R.string.contact_detail_key_epoch, blob.keyEpoch),
+                                        text = stringResource(R.string.contact_detail_key_epoch, blob.keyEpoch),
                                     style = MaterialTheme.typography.labelSmall,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant
                                 )
@@ -306,6 +309,7 @@ fun ContactDetailScreen(
 
                         Button(
                             onClick = {
+                                @Suppress("LocalContextGetResourceValueCall")
                                 scope.launch {
                                     try {
                                         val success = withContext(Dispatchers.IO) {
@@ -346,7 +350,8 @@ fun ContactDetailScreen(
 
             val cfp = contactFp
             if (cfp != null) {
-                val myFp = CryptoState.getMyFingerprint()
+                val activeUuid = CryptoState.activeProfileUuid
+                val myFp = remember(activeUuid) { CryptoState.getMyFingerprint() }
 
                 Text(
                     text = stringResource(R.string.contact_detail_compare_title),
@@ -376,8 +381,9 @@ fun ContactDetailScreen(
                             )
                             Spacer(modifier = Modifier.height(4.dp))
                         }
+                        val chunkedCfp = remember(cfp) { cfp.chunked(4).joinToString(" ") }
                         Text(
-                            text = cfp.chunked(4).joinToString(" "),
+                            text = chunkedCfp,
                             style = MaterialTheme.typography.bodySmall
                         )
                     }
@@ -394,7 +400,7 @@ fun ContactDetailScreen(
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
                             Spacer(modifier = Modifier.height(4.dp))
-                            val myShort = CryptoState.getMyShortFingerprint()
+                            val myShort = remember(activeUuid) { CryptoState.getMyShortFingerprint() }
                             if (myShort != null) {
                                 Text(
                                     text = myShort,
@@ -402,8 +408,9 @@ fun ContactDetailScreen(
                                 )
                                 Spacer(modifier = Modifier.height(4.dp))
                             }
+                            val chunkedMyFp = remember(myFp) { myFp.chunked(4).joinToString(" ") }
                             Text(
-                                text = myFp.chunked(4).joinToString(" "),
+                                text = chunkedMyFp,
                                 style = MaterialTheme.typography.bodySmall
                             )
                         }
@@ -416,12 +423,12 @@ fun ContactDetailScreen(
             OutlinedCard(modifier = Modifier.fillMaxWidth()) {
                 Column(modifier = Modifier.padding(16.dp)) {
                     Text(
-                        text = context.getString(R.string.contact_detail_key_epoch_label, c.keyEpoch),
+                        text = stringResource(R.string.contact_detail_key_epoch_label, c.keyEpoch),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                     Text(
-                        text = context.getString(R.string.contact_detail_contact_id, c.contactUuid.take(8)),
+                        text = stringResource(R.string.contact_detail_contact_id, c.contactUuid.take(8)),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -433,6 +440,7 @@ fun ContactDetailScreen(
             if (c.status != "verified") {
                 Button(
                     onClick = {
+                        @Suppress("LocalContextGetResourceValueCall")
                         scope.launch {
                             try {
                                 withContext(Dispatchers.IO) {
@@ -473,6 +481,7 @@ fun ContactDetailScreen(
                 colors = ButtonDefaults.outlinedButtonColors(contentColor = MaterialTheme.colorScheme.error)
             ) {
                 Text(stringResource(R.string.contact_detail_delete_button))
+            }
             }
         }
     }

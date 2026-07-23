@@ -8,7 +8,6 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
@@ -67,7 +66,13 @@ import java.util.Date
 import java.util.Locale
 import java.util.TimeZone
 import java.util.UUID
+import org.cyphr.app.crypto.ProfileKeyManager.ProfileInfo
+import org.cyphr.app.ui.MaxWidthBox
 import org.cyphr.app.ui.theme.CyphrTheme
+
+private val ISO_8601 = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss'Z'", Locale.US).apply {
+    timeZone = TimeZone.getTimeZone("UTC")
+}
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -83,6 +88,7 @@ fun TransformTextScreen(onNavigateBack: () -> Unit) {
     var selectedContact by remember { mutableStateOf<ContactKeyMeta?>(null) }
     var senderEpoch by remember { mutableIntStateOf(1) }
     var refreshTrigger by remember { mutableIntStateOf(0) }
+    var activeProfile by remember { mutableStateOf<ProfileInfo?>(null) }
     val lifecycleOwner = LocalLifecycleOwner.current
 
     LaunchedEffect(refreshTrigger) {
@@ -97,6 +103,9 @@ fun TransformTextScreen(onNavigateBack: () -> Unit) {
             ProfileKeyManager.loadProfileMetadata(context, CryptoState.activeProfileUuid)
         }
         senderEpoch = meta?.optInt("keyEpoch", 1) ?: 1
+        activeProfile = withContext(Dispatchers.IO) {
+            CryptoState.listProfiles().find { it.uuid == CryptoState.activeProfileUuid }
+        }
     }
 
     DisposableEffect(lifecycleOwner) {
@@ -125,14 +134,14 @@ fun TransformTextScreen(onNavigateBack: () -> Unit) {
             )
         }
     ) { innerPadding ->
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(innerPadding)
-                .verticalScroll(rememberScrollState())
-                .imePadding()
-                .padding(16.dp)
-        ) {
+        MaxWidthBox(modifier = Modifier.padding(innerPadding)) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .verticalScroll(rememberScrollState())
+                    .imePadding()
+                    .padding(16.dp)
+            ) {
             OutlinedTextField(
                 value = textInput,
                 onValueChange = { textInput = it },
@@ -144,10 +153,10 @@ fun TransformTextScreen(onNavigateBack: () -> Unit) {
 
             Spacer(modifier = Modifier.height(8.dp))
 
-            val byteSize = textInput.toByteArray().size
+            val byteSize = remember(textInput) { textInput.toByteArray().size }
             if (byteSize > PayloadEncoder.PAYLOAD_SIZE_WARN_BYTES) {
                 Text(
-                    text = context.getString(R.string.transform_size_warning, byteSize),
+                    text = stringResource(R.string.transform_size_warning, byteSize),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.error
                 )
@@ -155,8 +164,8 @@ fun TransformTextScreen(onNavigateBack: () -> Unit) {
 
             Spacer(modifier = Modifier.height(8.dp))
 
-            val activeProfile = CryptoState.listProfiles().find { it.uuid == CryptoState.activeProfileUuid }
-            if (activeProfile != null) {
+            val profile = activeProfile
+            if (profile != null) {
                 OutlinedCard(
                     modifier = Modifier.fillMaxWidth()
                 ) {
@@ -166,19 +175,19 @@ fun TransformTextScreen(onNavigateBack: () -> Unit) {
                             verticalAlignment = Alignment.CenterVertically
                         ) {
                             Text(
-                                text = context.getString(R.string.transform_profile_label, activeProfile.displayName),
+                                text = stringResource(R.string.transform_profile_label, profile.displayName),
                                 style = MaterialTheme.typography.titleMedium,
                                 modifier = Modifier.weight(1f)
                             )
                             Text(
-                                text = if (activeProfile.uuid == "default") stringResource(R.string.transform_profile_default) else stringResource(R.string.transform_profile_custom),
+                                text = if (profile.uuid == "default") stringResource(R.string.transform_profile_default) else stringResource(R.string.transform_profile_custom),
                                 style = MaterialTheme.typography.labelSmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
                         }
                         Spacer(modifier = Modifier.height(2.dp))
                         Text(
-                            text = context.getString(R.string.transform_key_epoch, activeProfile.keyEpoch),
+                            text = stringResource(R.string.transform_key_epoch, profile.keyEpoch),
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
@@ -283,62 +292,61 @@ fun TransformTextScreen(onNavigateBack: () -> Unit) {
                 onClick = {
                     isLoading = true
                     scope.launch {
-                        try {
-                            transformResult = withContext(Dispatchers.IO) {
-                                val recipientUuid = selectedContact?.contactUuid
-                                val recipientKey = if (recipientUuid != null) {
-                                    ContactKeyStore.loadContactPublicKey(
-                                        context, CryptoState.activeProfileUuid, recipientUuid
-                                    )
-                                } else null
-
-                                 if (recipientKey != null && recipientUuid != null) {
-                                     val store = ReplayProtectionStore(context)
-                                     val replayCounter = store.nextSendCounter(CryptoState.activeProfileUuid, recipientUuid)
-
-                                    val result = PayloadEncoder.encodePayload(
-                                        plaintextMessage = textInput.toByteArray(),
-                                        senderKeyEpoch = senderEpoch,
-                                        recipientPublicKeyBytes = recipientKey,
-                                        senderPublicKeyBytes = CryptoState.profilePublicKeyBytes,
-                                        replayCounter = replayCounter
-                                    )
-
-                                    if (result != null) {
-                                        val contactMeta = ContactKeyStore.getContact(
+                        isLoading = true
+                        transformResult = try {
+                                withContext(Dispatchers.IO) {
+                                    val recipientUuid = selectedContact?.contactUuid
+                                    val recipientKey = if (recipientUuid != null) {
+                                        ContactKeyStore.loadContactPublicKey(
                                             context, CryptoState.activeProfileUuid, recipientUuid
                                         )
-                                        val sdf = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss'Z'", Locale.US).apply {
-                                            timeZone = TimeZone.getTimeZone("UTC")
-                                        }
-                                        val sentMsg = StoredMessage(
-                                            messageId = UUID.randomUUID().toString(),
-                                            profileUuid = CryptoState.activeProfileUuid,
-                                            senderContactUuid = recipientUuid,
-                                            senderDisplayName = contactMeta?.displayName,
-                                            senderFingerprint = contactMeta?.shortFingerprint,
-                                            replayCounter = replayCounter,
-                                            messageText = textInput,
-                                            rawPayload = result,
-                                            decryptedAt = sdf.format(Date()),
-                                            keyEpoch = senderEpoch,
-                                            isOutgoing = true
+                                    } else null
+
+                                     if (recipientKey != null && recipientUuid != null) {
+                                         val store = ReplayProtectionStore(context)
+                                         val replayCounter = store.nextSendCounter(CryptoState.activeProfileUuid, recipientUuid)
+
+                                        val result = PayloadEncoder.encodePayload(
+                                            plaintextMessage = textInput.toByteArray(),
+                                            senderKeyEpoch = senderEpoch,
+                                            recipientPublicKeyBytes = recipientKey,
+                                            senderPublicKeyBytes = CryptoState.profilePublicKeyBytes,
+                                            replayCounter = replayCounter
                                         )
-                                        MessageLogStore.saveMessage(context, sentMsg)
-                                    }
-                                    result ?: "Encryption failed"
-                                } else {
-                                    if (contacts.isEmpty()) {
-                                        context.getString(R.string.transform_no_contacts_available)
+
+                                        if (result != null) {
+                                            val contactMeta = ContactKeyStore.getContact(
+                                                context, CryptoState.activeProfileUuid, recipientUuid
+                                            )
+                                            val sentMsg = StoredMessage(
+                                                messageId = UUID.randomUUID().toString(),
+                                                profileUuid = CryptoState.activeProfileUuid,
+                                                senderContactUuid = recipientUuid,
+                                                senderDisplayName = contactMeta?.displayName,
+                                                senderFingerprint = contactMeta?.shortFingerprint,
+                                                replayCounter = replayCounter,
+                                                messageText = textInput,
+                                                rawPayload = result,
+                                                decryptedAt = ISO_8601.format(Date()),
+                                                keyEpoch = senderEpoch,
+                                                isOutgoing = true
+                                            )
+                                            MessageLogStore.saveMessage(context, sentMsg)
+                                        }
+                                        result ?: "Encryption failed"
                                     } else {
-                                        context.getString(R.string.transform_no_key)
+                                        @Suppress("LocalContextGetResourceValueCall")
+                                        if (contacts.isEmpty()) {
+                                            context.getString(R.string.transform_no_contacts_available)
+                                        } else {
+                                            context.getString(R.string.transform_no_key)
+                                        }
                                     }
                                 }
+                            } catch (e: Exception) {
+                                @Suppress("LocalContextGetResourceValueCall")
+                                context.getString(R.string.transform_storage_error, e.message)
                             }
-                        } catch (e: Exception) {
-                            transformResult = context.getString(R.string.transform_storage_error, e.message)
-                            snackbarHostState.showSnackbar(context.getString(R.string.transform_save_error, e.message))
-                        }
                         isLoading = false
                     }
                 },
@@ -378,6 +386,7 @@ fun TransformTextScreen(onNavigateBack: () -> Unit) {
                                     cm?.setPrimaryClip(
                                         ClipData.newPlainText("Cyphr payload", result).markSensitiveIfSupported()
                                     )
+                                    @Suppress("LocalContextGetResourceValueCall")
                                     scope.launch { snackbarHostState.showSnackbar(context.getString(R.string.transform_copied)) }
                                 }
                             ) {
@@ -404,6 +413,7 @@ fun TransformTextScreen(onNavigateBack: () -> Unit) {
             )
 
             Spacer(modifier = Modifier.height(16.dp))
+            }
         }
     }
 }

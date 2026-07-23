@@ -2,6 +2,7 @@ package org.cyphr.app.keyboard
 
 import android.content.ClipboardManager
 import android.content.Context
+import android.util.Log
 import android.inputmethodservice.InputMethodService
 import android.view.View
 import android.view.WindowManager
@@ -9,6 +10,7 @@ import android.view.inputmethod.EditorInfo
 import android.view.inputmethod.InputMethodManager
 import android.view.inputmethod.InputMethodSubtype
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
@@ -31,9 +33,11 @@ import kotlinx.coroutines.cancel
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import org.cyphr.app.AppSettings
+import org.cyphr.app.R
 import org.cyphr.app.crypto.ContactKeyStore
 import org.cyphr.app.crypto.CryptoFeatureFlag
 import org.cyphr.app.crypto.MessageLogStore
+import org.cyphr.app.crypto.PayloadDecoder
 import org.cyphr.app.crypto.PayloadEncoder
 import org.cyphr.app.crypto.ProfileKeyManager
 import org.cyphr.app.crypto.ReplayProtectionStore
@@ -45,6 +49,12 @@ import java.util.TimeZone
 import java.util.UUID
 
 class CyphrKeyboardService : InputMethodService(), LifecycleOwner, SavedStateRegistryOwner {
+
+    private companion object {
+        private val ISO_8601 = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss'Z'", Locale.US).apply {
+            timeZone = TimeZone.getTimeZone("UTC")
+        }
+    }
 
     private val _buf = StringBuilder()
     private var _buffer by mutableStateOf("")
@@ -59,6 +69,10 @@ class CyphrKeyboardService : InputMethodService(), LifecycleOwner, SavedStateReg
     private var _selectedContact by mutableStateOf<ContactInfo?>(null)
     private var _isEncrypting by mutableStateOf(false)
     private var _isEncryptMode by mutableStateOf(false)
+    private var _showDecryptPopup by mutableStateOf(false)
+    private var _decryptPayloadInput by mutableStateOf("")
+    private var _decryptResult by mutableStateOf<String?>(null)
+    private var _isDecrypting by mutableStateOf(false)
 
     private val lifecycleRegistry = LifecycleRegistry(this)
     private val savedStateRegistryController = SavedStateRegistryController.create(this)
@@ -84,8 +98,8 @@ class CyphrKeyboardService : InputMethodService(), LifecycleOwner, SavedStateReg
             setViewTreeSavedStateRegistryOwner(this@CyphrKeyboardService)
         }
         composeView.setContent {
+            CompositionLocalProvider(LocalBufferState provides _buffer) {
             KeyboardScreen(
-                buffer = _buffer,
                 selectedContact = _selectedContact,
                 availableContacts = _contacts,
                 currentLayout = KEYBOARD_LAYOUTS[_layoutIndex],
@@ -204,8 +218,22 @@ class CyphrKeyboardService : InputMethodService(), LifecycleOwner, SavedStateReg
                 },
                 onCycleLanguage = { cycleLanguage(true) },
                 onCycleLanguageBackward = { cycleLanguage(false) },
+                showDecryptPopup = _showDecryptPopup,
+                decryptPayloadInput = _decryptPayloadInput,
+                decryptResult = _decryptResult,
+                isDecrypting = _isDecrypting,
+                onToggleDecryptPopup = {
+                    _showDecryptPopup = !_showDecryptPopup
+                    if (!_showDecryptPopup) {
+                        _decryptPayloadInput = ""
+                        _decryptResult = null
+                    }
+                },
+                onDecryptPayloadInputChange = { _decryptPayloadInput = it },
+                onDecryptPayload = { decryptKeyboardPayload() },
                 modifier = Modifier.fillMaxWidth()
             )
+            }
         }
         getWindow()?.window?.addFlags(WindowManager.LayoutParams.FLAG_SECURE)
         return composeView
@@ -391,33 +419,27 @@ class CyphrKeyboardService : InputMethodService(), LifecycleOwner, SavedStateReg
                         ?: return@withContext null
 
                     val replayStore = ReplayProtectionStore(ctx)
-                    val counters = replayStore.loadCounters(profileUuid, contactUuid)
-                    replayStore.saveCounters(profileUuid, contactUuid, counters.copy(
-                        sendCounter = counters.sendCounter + 1
-                    ))
+                    val replayCounter = replayStore.nextSendCounter(profileUuid, contactUuid)
 
                     val encoded = PayloadEncoder.encodePayload(
                         plaintextMessage = plaintext.toByteArray(),
                         senderKeyEpoch = senderEpoch,
                         recipientPublicKeyBytes = recipientKey,
                         senderPublicKeyBytes = senderPublicKey,
-                        replayCounter = counters.sendCounter
+                        replayCounter = replayCounter
                     ) ?: return@withContext null
 
                     val contactMeta = ContactKeyStore.getContact(ctx, profileUuid, contactUuid)
-                    val sdf = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss'Z'", Locale.US).apply {
-                        timeZone = TimeZone.getTimeZone("UTC")
-                    }
                     val sentMsg = StoredMessage(
                         messageId = UUID.randomUUID().toString(),
                         profileUuid = profileUuid,
                         senderContactUuid = contactUuid,
                         senderDisplayName = contactMeta?.displayName,
                         senderFingerprint = contactMeta?.shortFingerprint,
-                        replayCounter = counters.sendCounter,
+                        replayCounter = replayCounter,
                         messageText = plaintext,
                         rawPayload = encoded,
-                        decryptedAt = sdf.format(Date()),
+                        decryptedAt = ISO_8601.format(Date()),
                         keyEpoch = senderEpoch,
                         isOutgoing = true
                     )
@@ -437,6 +459,36 @@ class CyphrKeyboardService : InputMethodService(), LifecycleOwner, SavedStateReg
                 _buffer = ""
                 triggerEditorAction()
             }
+        }
+    }
+
+    private fun decryptKeyboardPayload() {
+        if (_isDecrypting) return
+        if (!CryptoFeatureFlag.isEnabled) return
+        val input = _decryptPayloadInput.trim()
+        if (input.isEmpty()) return
+
+        _isDecrypting = true
+        _decryptResult = null
+
+        scope.launch {
+            val ctx = this@CyphrKeyboardService
+            val result = withContext(Dispatchers.IO) {
+                try {
+                    val profileUuid = ProfileKeyManager.loadActiveProfileUuid(ctx)
+                        ?: return@withContext null as String?
+                    val keysetBytes = ProfileKeyManager.loadProfileKeys(ctx, profileUuid)
+                        ?: return@withContext null
+                    val decoded = PayloadDecoder.decodePayload(input, keysetBytes)
+                        ?: return@withContext null
+                    "Decrypted: " + decoded.messageText.decodeToString()
+                } catch (e: Exception) {
+                    Log.w("CyphrKeyboard", "decryptKeyboardPayload failed", e)
+                    null
+                }
+            }
+            _isDecrypting = false
+            _decryptResult = result ?: ctx.getString(R.string.keyboard_decrypt_failed)
         }
     }
 }

@@ -1,5 +1,6 @@
 package org.cyphr.app.crypto
 
+import android.util.Log
 import com.google.crypto.tink.HybridDecrypt
 import com.google.crypto.tink.InsecureSecretKeyAccess
 import com.google.crypto.tink.KeysetHandle
@@ -35,6 +36,7 @@ fun stripDelimiters(payload: String): String {
 
 object PayloadDecoder {
 
+    private const val TAG = "CyphrDecrypt"
     private const val PAYLOAD_VERSION: Byte = 0x01
     private const val PAYLOAD_VERSION_V2: Byte = 0x02
     private const val MIN_WRAPPER_SIZE = 3
@@ -48,14 +50,27 @@ object PayloadDecoder {
         contextInfo: ByteArray = "cyphr-c3-v1".toByteArray()
     ): DecodedPayload? {
         if (!CryptoFeatureFlag.isEnabled) return null
+        val cleaned = stripDelimiters(encodedPayload)
+        val rawPayload = Base64UrlCodec.decode(cleaned)
+        if (rawPayload == null) {
+            Log.w(TAG, "Stage 2 failed: base64 decode returned null")
+            return null
+        }
+        if (rawPayload.size > MAX_PAYLOAD_SIZE_BYTES) {
+            Log.w(TAG, "Stage 3 failed: payload too large (${rawPayload.size} > $MAX_PAYLOAD_SIZE_BYTES)")
+            return null
+        }
+        val parsed = try {
+            parseOuterWrapper(rawPayload)
+        } catch (e: Exception) {
+            Log.w(TAG, "Stage 4 failed: wrapper parse: ${e::class.simpleName}")
+            return null
+        }
+        if (!isVersionSupported(parsed.version)) {
+            Log.w(TAG, "Stage 5 failed: unsupported version ${parsed.version.toInt() and 0xFF}")
+            return null
+        }
         return try {
-            val cleaned = stripDelimiters(encodedPayload)
-            val rawPayload = Base64UrlCodec.decode(cleaned) ?: return null
-            if (rawPayload.size > MAX_PAYLOAD_SIZE_BYTES) return null
-
-            val parsed = parseOuterWrapper(rawPayload)
-            if (!isVersionSupported(parsed.version)) return null
-
             HybridConfig.register()
             val handle = TinkProtoKeysetFormat.parseKeyset(
                 recipientKeysetBytes,
@@ -79,7 +94,8 @@ object PayloadDecoder {
                 keyEpoch = parsed.epoch,
                 senderPublicKeyBytes = parsed.senderKeyBytes
             )
-        } catch (_: Exception) {
+        } catch (e: Exception) {
+            Log.w(TAG, "Stage 6/7 failed (keyset/HPKE): ${e::class.simpleName}")
             null
         }
     }

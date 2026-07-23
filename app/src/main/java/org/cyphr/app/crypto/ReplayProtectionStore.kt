@@ -1,6 +1,8 @@
 package org.cyphr.app.crypto
 
 import android.content.Context
+import android.util.Log
+import org.cyphr.app.crypto.EncryptedStoreException
 import org.json.JSONObject
 import java.io.File
 
@@ -13,18 +15,19 @@ class ReplayProtectionStore(private val context: Context) {
 
     @Synchronized
     fun loadCounters(profileUuid: String, contactUuid: String): SendReceiveCounters {
-        if (!CryptoFeatureFlag.isEnabled) return SendReceiveCounters(0, 0)
+        if (!CryptoFeatureFlag.isEnabled) return SendReceiveCounters(0, -1)
         val file = countersFile(profileUuid, contactUuid)
         val text = EncryptedStore.readText(context, file)
-        if (text == null) return SendReceiveCounters(0, 0)
+        if (text == null) return SendReceiveCounters(0, -1)
         return try {
             val json = JSONObject(text)
             SendReceiveCounters(
                 sendCounter = json.optInt("sendCounter", 0),
-                receiveCounter = json.optInt("receiveCounter", 0)
+                receiveCounter = json.optInt("receiveCounter", -1)
             )
         } catch (_: Exception) {
-            SendReceiveCounters(0, 0)
+            Log.w("CyphrReplay", "loadCounters JSON parse failed")
+            SendReceiveCounters(0, -1)
         }
     }
 
@@ -36,16 +39,13 @@ class ReplayProtectionStore(private val context: Context) {
             put("sendCounter", counters.sendCounter)
             put("receiveCounter", counters.receiveCounter)
         }
-        EncryptedStore.writeText(context, file, json.toString())
+        try {
+            EncryptedStore.writeText(context, file, json.toString())
+        } catch (e: EncryptedStoreException) {
+            Log.w("CyphrReplay", "saveCounters failed: ${e.message}")
+        }
     }
 
-    /**
-     * Validates that [counter] is newer than the stored receive counter for the
-     * given contact, and updates the stored counter if valid.
-     *
-     * Returns `true` if the counter is accepted, `false` if it is a replay or
-     * otherwise invalid.
-     */
     @Synchronized
     fun acceptReceivedCounter(profileUuid: String, contactUuid: String, counter: Int): Boolean {
         if (!CryptoFeatureFlag.isEnabled) return false
@@ -59,7 +59,13 @@ class ReplayProtectionStore(private val context: Context) {
     @Synchronized
     fun nextSendCounter(profileUuid: String, contactUuid: String): Int {
         val current = loadCounters(profileUuid, contactUuid)
-        saveCounters(profileUuid, contactUuid, current.copy(sendCounter = current.sendCounter + 1))
+        val next = if (current.sendCounter >= Int.MAX_VALUE - 1) {
+            Log.w("CyphrReplay", "send counter overflow, wrapping to 0")
+            0
+        } else {
+            current.sendCounter + 1
+        }
+        saveCounters(profileUuid, contactUuid, current.copy(sendCounter = next))
         return current.sendCounter
     }
 

@@ -9,7 +9,6 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
@@ -55,6 +54,7 @@ import kotlinx.coroutines.withContext
 import org.cyphr.app.crypto.ContactKeyMeta
 import org.cyphr.app.crypto.ContactKeyStore
 import org.cyphr.app.crypto.ExchangeBlob
+import org.cyphr.app.ui.MaxWidthBox
 import org.cyphr.app.ui.theme.CyphrTheme
 import java.util.UUID
 
@@ -102,6 +102,7 @@ fun ContactsListScreen(
         }
     }
 
+    @Suppress("LocalContextGetResourceValueCall")
     LaunchedEffect(blobInput) {
         val trimmed = blobInput.trim()
         if (trimmed.isNotEmpty()) {
@@ -142,15 +143,10 @@ fun ContactsListScreen(
             )
         }
     ) { innerPadding ->
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(innerPadding)
-                .imePadding()
-        ) {
+        MaxWidthBox(modifier = Modifier.padding(innerPadding)) {
             LazyColumn(
                 modifier = Modifier
-                    .fillMaxSize()
+                    .fillMaxWidth()
                     .padding(16.dp)
             ) {
                 item {
@@ -228,8 +224,9 @@ fun ContactsListScreen(
                                         style = MaterialTheme.typography.titleLarge
                                     )
                                     Spacer(modifier = Modifier.height(4.dp))
-                                    Text(
-                                        text = fp.chunked(4).joinToString(" "),
+                                val chunkedFp = remember(fp) { fp.chunked(4).joinToString(" ") }
+                                Text(
+                                    text = chunkedFp,
                                         style = MaterialTheme.typography.bodySmall,
                                         color = MaterialTheme.colorScheme.onSurfaceVariant
                                     )
@@ -257,8 +254,10 @@ fun ContactsListScreen(
                                 Button(
                                     onClick = {
                                         val contactUuid = UUID.randomUUID().toString()
+                                        @Suppress("LocalContextGetResourceValueCall")
                                         val name = displayName.ifBlank { context.getString(R.string.contacts_name_template, fp.take(4)) }
 
+                                    @Suppress("LocalContextGetResourceValueCall")
                                     scope.launch {
                                         try {
                                             withContext(Dispatchers.IO) {

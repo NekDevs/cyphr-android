@@ -7,6 +7,7 @@ import android.content.Intent
 import android.content.pm.PackageManager
 import android.net.Uri
 import android.os.Bundle
+import android.util.Log
 import android.view.WindowManager
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
@@ -123,7 +124,9 @@ class MainActivity : FragmentActivity() {
                                         }
                                     }
                                 }
-                            } catch (_: Exception) { }
+                             } catch (_: Exception) {
+                                    Log.w("CyphrMain", "startActivity failed")
+                                }
                         }
                     }
 
@@ -275,8 +278,8 @@ class MainActivity : FragmentActivity() {
         super.onDestroy()
         if (isFinishing) {
             CryptoState.viewModel = null
+            PendingPayload.clear()
         }
-        PendingPayload.clear()
     }
 
     override fun onRequestPermissionsResult(requestCode: Int, permissions: Array<out String>, grantResults: IntArray) {

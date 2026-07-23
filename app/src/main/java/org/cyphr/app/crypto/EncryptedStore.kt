@@ -1,6 +1,7 @@
 package org.cyphr.app.crypto
 
 import android.content.Context
+import android.util.Log
 import androidx.security.crypto.EncryptedFile
 import androidx.security.crypto.MasterKey
 import java.io.File
@@ -42,7 +43,8 @@ object EncryptedStore {
             } else {
                 null
             }
-        } catch (_: Exception) {
+        } catch (e: Exception) {
+            Log.w("CyphrStore", "readBytes failed for ${file.name}: ${e.message}")
             null
         }
     }

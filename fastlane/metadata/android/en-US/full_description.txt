@@ -1,0 +1,26 @@
+Cyphr encrypts your message on your Android device before you send it through platforms such as Discord, Instagram, Telegram, or any other messenger.
+
+The platform only receives encrypted text. The person you are messaging can decrypt it with Cyphr.
+
+<br><b>How it works</b><br>
+Write your message in Cyphr. Cyphr encrypts it on your device. Copy and send the encrypted text in any messenger. Your contact decrypts it with Cyphr on their device.
+
+Cyphr works without accounts, phone numbers, servers, or an internet connection.
+
+<br><b>Features</b><br>
+- Encrypt messages for individual contacts<br>
+- Exchange keys with QR codes or copyable text<br>
+- Verify contact fingerprints<br>
+- Multiple profiles with key rotation<br>
+- Replay protection for received messages<br>
+- Biometric app lock<br>
+- Custom keyboard with 8 language layouts<br>
+- On-screen decryption overlay (accessibility service)<br>
+- No ads, analytics, tracking, or telemetry<br>
+- No internet permission<br>
+
+<br><b>Privacy</b><br>
+Cyphr is designed to work entirely on your device. No user account, no phone number, no ads, no analytics, no tracking SDKs, no remote server. Your encryption keys never leave your device unless you choose to share your public key.
+
+<br><b>Warning</b><br>
+Cyphr is experimental and has not been independently audited. Do not use it for highly sensitive or critical communications. Always verify fingerprints through a separate trusted channel before relying on encryption.

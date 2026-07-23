@@ -4,12 +4,12 @@ import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Context
 import android.content.Intent
+import android.util.Log
 import android.graphics.Bitmap
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
@@ -49,6 +49,7 @@ import com.google.zxing.WriterException
 import com.google.zxing.qrcode.QRCodeWriter
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import org.cyphr.app.ui.MaxWidthBox
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -84,14 +85,14 @@ fun QrCodeScreen(
             )
         }
     ) { innerPadding ->
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(innerPadding)
-                .verticalScroll(rememberScrollState())
-                .padding(16.dp),
-            horizontalAlignment = Alignment.CenterHorizontally
-        ) {
+        MaxWidthBox(maxWidth = 500.dp, modifier = Modifier.padding(innerPadding)) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .verticalScroll(rememberScrollState())
+                    .padding(16.dp),
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
             Spacer(modifier = Modifier.height(8.dp))
 
             OutlinedCard(modifier = Modifier.fillMaxWidth()) {
@@ -125,12 +126,14 @@ fun QrCodeScreen(
                 onClick = {
                     val cm = context.getSystemService(Context.CLIPBOARD_SERVICE) as? ClipboardManager
                     if (cm != null) {
+                        @Suppress("LocalContextGetResourceValueCall")
                         cm.setPrimaryClip(
                             ClipData.newPlainText(context.getString(R.string.share_label), blob).markSensitiveIfSupported()
                         )
                     }
                     autoClearJob?.cancel()
                     autoClearJob = scope.launch {
+                        @Suppress("LocalContextGetResourceValueCall")
                         snackbarHostState.showSnackbar(context.getString(R.string.qr_code_copied))
                         delay(30_000L)
                         val cm2 = context.getSystemService(Context.CLIPBOARD_SERVICE) as? ClipboardManager
@@ -151,8 +154,9 @@ fun QrCodeScreen(
                             type = "text/plain"
                             putExtra(Intent.EXTRA_TEXT, blob)
                         }
+                        @Suppress("LocalContextGetResourceValueCall")
                         context.startActivity(Intent.createChooser(intent, context.getString(R.string.share_sheet_title)))
-                    } catch (_: Exception) { }
+                    } catch (_: Exception) { Log.w("CyphrQrCode", "share intent failed") }
                 },
                 modifier = Modifier.fillMaxWidth()
             ) {
@@ -173,10 +177,12 @@ fun QrCodeScreen(
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 textAlign = TextAlign.Center
             )
+            }
         }
     }
 }
 
+@Suppress("UseKtx")
 fun generateQrBitmap(content: String, size: Int): Bitmap {
     val writer = QRCodeWriter()
     val bitMatrix = writer.encode(content, BarcodeFormat.QR_CODE, size, size)

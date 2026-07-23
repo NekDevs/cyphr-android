@@ -4,6 +4,7 @@ import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Context
 import android.content.Intent
+import android.util.Log
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -122,5 +123,5 @@ private fun shareViaSystem(context: Context, blob: String) {
             putExtra(Intent.EXTRA_TEXT, blob)
         }
         context.startActivity(Intent.createChooser(intent, context.getString(R.string.share_intent_title)))
-    } catch (_: Exception) { }
+    } catch (_: Exception) { Log.w("CyphrShareKey", "share intent failed") }
 }

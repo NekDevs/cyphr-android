@@ -3,6 +3,7 @@ package org.cyphr.app
 import android.Manifest
 import android.content.pm.PackageManager
 import android.graphics.ImageFormat
+import android.util.Log
 import android.util.Size
 import android.view.ViewGroup
 import androidx.camera.core.CameraSelector
@@ -163,7 +164,7 @@ fun QrScannerScreen(onNavigateBack: () -> Unit) {
                     color = MaterialTheme.colorScheme.onSurface,
                     modifier = Modifier
                         .align(Alignment.BottomCenter)
-                        .padding(bottom = 48.dp)
+                        .padding(bottom = 32.dp)
                 )
             } else {
                 Column(
@@ -185,7 +186,7 @@ fun QrScannerScreen(onNavigateBack: () -> Unit) {
                                         data = Uri.fromParts("package", context.packageName, null)
                                     }
                                     context.startActivity(intent)
-                                } catch (_: Exception) { }
+                                } catch (_: Exception) { Log.w("CyphrQrScan", "settings intent failed") }
                             },
                             modifier = Modifier.fillMaxWidth(0.6f)
                         ) {
@@ -242,6 +243,7 @@ private fun CameraPreview(
             }
             val cameraProviderFuture = ProcessCameraProvider.getInstance(ctx)
 
+            @Suppress("LocalContextGetResourceValueCall")
             cameraProviderFuture.addListener({
                 try {
                     val provider = cameraProviderFuture.get()

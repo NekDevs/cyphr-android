@@ -1,6 +1,7 @@
 package org.cyphr.app.crypto
 
 import android.content.Context
+import android.util.Log
 import com.google.crypto.tink.InsecureSecretKeyAccess
 import com.google.crypto.tink.KeysetHandle
 import com.google.crypto.tink.RegistryConfiguration
@@ -10,10 +11,14 @@ import com.google.crypto.tink.hybrid.HpkePrivateKey
 import com.google.crypto.tink.hybrid.HybridConfig
 import org.json.JSONObject
 import java.io.File
+import java.time.Instant
+import java.time.ZoneOffset
+import java.time.format.DateTimeFormatter
+import java.util.Locale
 
 object ProfileKeyManager {
 
-    private const val ALGORITHM_TAG = "HPKE-X25519-AES256GCM"
+    private val ALGORITHM_TAG get() = ExchangeBlob.ALGORITHM_TAG
 
     private val hpkeParams: HpkeParameters by lazy {
         HpkeParameters.builder()
@@ -35,6 +40,7 @@ object ProfileKeyManager {
                 RegistryConfiguration.get()
             )
         } catch (_: Exception) {
+            Log.w("CyphrKeys", "generateProfileKeys failed")
             null
         }
     }
@@ -62,6 +68,7 @@ object ProfileKeyManager {
             val privateKey = primaryKey as? HpkePrivateKey ?: return null
             privateKey.publicKey.publicKeyBytes.toByteArray()
         } catch (_: Exception) {
+            Log.w("CyphrKeys", "getPublicKey failed")
             null
         }
     }
@@ -74,7 +81,7 @@ object ProfileKeyManager {
             put("profileUuid", profileUuid)
             put("displayName", displayName ?: defaultDisplayName(profileUuid))
             put("algorithmTag", ALGORITHM_TAG)
-            put("createdAt", ISO_8601_DATE_FORMAT.format(java.util.Date()))
+            put("createdAt", ISO_8601_DATE_FORMAT.format(Instant.now()))
             put("status", "active")
             put("keyEpoch", keyEpoch)
         }
@@ -84,7 +91,7 @@ object ProfileKeyManager {
     fun loadProfileMetadata(context: Context, profileUuid: String): JSONObject? {
         if (!CryptoFeatureFlag.isEnabled) return null
         val text = EncryptedStore.readText(context, File(profileDir(context, profileUuid), "keyset-info.json"))
-        return if (text != null) try { JSONObject(text) } catch (_: Exception) { null } else null
+        return if (text != null) try { JSONObject(text) } catch (_: Exception) { Log.w("CyphrKeys", "loadProfileMetadata JSON failed"); null } else null
     }
 
     data class ProfileInfo(
@@ -127,10 +134,11 @@ object ProfileKeyManager {
             val meta = loadProfileMetadata(context, profileUuid) ?: return null
             val currentEpoch = meta.optInt("keyEpoch", 1)
             meta.put("keyEpoch", currentEpoch + 1)
-            meta.put("rotatedAt", ISO_8601_DATE_FORMAT.format(java.util.Date()))
+            meta.put("rotatedAt", ISO_8601_DATE_FORMAT.format(Instant.now()))
             writeMetadataFile(context, profileUuid, meta)
             newKeyset
         } catch (_: Exception) {
+            Log.w("CyphrKeys", "rotateProfileKeys failed")
             null
         }
     }
@@ -153,9 +161,10 @@ object ProfileKeyManager {
         val rotatedAt = meta.optString("rotatedAt", "")
         if (rotatedAt.isEmpty()) return false
         return try {
-            val time = ISO_8601_DATE_FORMAT.parse(rotatedAt) ?: return false
-            System.currentTimeMillis() - time.time < 3600_000L
+            val instant = Instant.from(ISO_8601_DATE_FORMAT.parse(rotatedAt))
+            System.currentTimeMillis() - instant.toEpochMilli() < 3600_000L
         } catch (_: Exception) {
+            Log.w("CyphrKeys", "isKeyRecentlyRotated date parse failed")
             false
         }
     }
@@ -167,6 +176,7 @@ object ProfileKeyManager {
         return try {
             JSONObject(text).optString("activeProfileUuid", "default")
         } catch (_: Exception) {
+            Log.w("CyphrKeys", "loadActiveProfileUuid JSON failed")
             null
         }
     }
@@ -202,8 +212,6 @@ object ProfileKeyManager {
     private fun defaultDisplayName(uuid: String): String =
         if (uuid == "default") "Personal" else "Profile ${uuid.take(8)}"
 
-    private val ISO_8601_DATE_FORMAT: java.text.SimpleDateFormat =
-        java.text.SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss'Z'", java.util.Locale.US).apply {
-            timeZone = java.util.TimeZone.getTimeZone("UTC")
-        }
+    private val ISO_8601_DATE_FORMAT: DateTimeFormatter =
+        DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ssX", Locale.US).withZone(ZoneOffset.UTC)
 }

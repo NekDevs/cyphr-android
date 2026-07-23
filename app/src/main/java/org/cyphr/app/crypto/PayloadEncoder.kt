@@ -1,5 +1,6 @@
 package org.cyphr.app.crypto
 
+import android.util.Log
 import com.google.crypto.tink.HybridEncrypt
 import com.google.crypto.tink.KeysetHandle
 import com.google.crypto.tink.RegistryConfiguration
@@ -52,7 +53,8 @@ object PayloadEncoder {
                 val base64 = Base64UrlCodec.encode(wrapper)
                 if (base64 != null) "$PAYLOAD_BEGIN_DELIMITER$base64$PAYLOAD_END_DELIMITER" else null
             }
-        } catch (_: Exception) {
+        } catch (e: Exception) {
+            Log.w("CyphrEncode", "encodePayload failed: ${e.message}")
             null
         }
     }

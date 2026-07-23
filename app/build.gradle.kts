@@ -5,11 +5,7 @@ plugins {
 
 android {
     namespace = "org.cyphr.app"
-    compileSdk {
-        version = release(36) {
-            minorApiLevel = 1
-        }
-    }
+    compileSdk = 37
 
     signingConfigs {
         create("release") {
@@ -23,7 +19,7 @@ android {
     defaultConfig {
         applicationId = "org.cyphr.app"
         minSdk = 29
-        targetSdk = 36
+        targetSdk = 37
         versionCode = 1
         versionName = "1.0.0"
 
@@ -32,7 +28,10 @@ android {
 
     buildTypes {
         release {
-            signingConfig = signingConfigs.getByName("release")
+            val releaseSigning = signingConfigs.getByName("release")
+            if (releaseSigning.storeFile?.exists() == true) {
+                signingConfig = releaseSigning
+            }
             isMinifyEnabled = true
             isShrinkResources = true
             proguardFiles(
@@ -47,6 +46,9 @@ android {
     }
     buildFeatures {
         compose = true
+    }
+    lint {
+        disable += setOf("GradleDependency", "NewerVersionAvailable")
     }
 }
 

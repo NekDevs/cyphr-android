@@ -1,12 +1,14 @@
 package org.cyphr.app.crypto
 
 import android.content.Context
+import android.util.Log
+import org.cyphr.app.crypto.EncryptedStoreException
 import org.json.JSONObject
 import java.io.File
-import java.text.SimpleDateFormat
-import java.util.Date
+import java.time.Instant
+import java.time.ZoneOffset
+import java.time.format.DateTimeFormatter
 import java.util.Locale
-import java.util.TimeZone
 
 sealed class SenderResolution {
     data class KnownContact(
@@ -30,11 +32,6 @@ data class ContactKeyMeta(
 
 object ContactKeyStore {
 
-    /**
-     * Returns true if the on-disk public key's fingerprint matches the
-     * fingerprint stored in the contact metadata. A mismatch indicates
-     * the key has been replaced since the contact was originally saved.
-     */
     fun keyFingerprintMatchesMetadata(
         context: Context,
         profileUuid: String,
@@ -48,11 +45,6 @@ object ContactKeyStore {
         return computedFp == storedFp
     }
 
-    /**
-     * Searches all contacts in the given profile and returns the UUID of
-     * the first contact whose stored fingerprint matches [fingerprint],
-     * or null if no match is found.
-     */
     fun findContactByFingerprint(
         context: Context,
         profileUuid: String,
@@ -69,18 +61,6 @@ object ContactKeyStore {
             ?.name
     }
 
-    /**
-     * Resolves a parsed sender public key (from a v2 payload) against
-     * saved contacts for the given [profileUuid].
-     *
-     * Returns:
-     * - [SenderResolution.KnownContact] if the sender key's fingerprint
-     *   matches a stored contact.
-     * - [SenderResolution.UnknownKey] if the sender key is present but
-     *   does not match any saved contact.
-     * - [SenderResolution.NoSenderInfo] if [senderPublicKeyBytes] is
-     *   null (i.e. a v1 payload with no sender identity).
-     */
     fun resolveSender(
         context: Context,
         profileUuid: String,
@@ -103,10 +83,8 @@ object ContactKeyStore {
         )
     }
 
-    private val ISO_8601: SimpleDateFormat =
-        SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss'Z'", Locale.US).apply {
-            timeZone = TimeZone.getTimeZone("UTC")
-        }
+    private val ISO_8601: DateTimeFormatter =
+        DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ssX", Locale.US).withZone(ZoneOffset.UTC)
 
     fun updateContactFromBlob(
         context: Context,
@@ -140,7 +118,7 @@ object ContactKeyStore {
         verificationStatus: String
     ) {
         saveContactPublicKey(context, profileUuid, contactUuid, publicKeyBytes, keyEpoch)
-        val now = ISO_8601.format(Date())
+        val now = ISO_8601.format(Instant.now())
         val json = JSONObject().apply {
             put("contactUuid", contactUuid)
             put("displayName", displayName)
@@ -164,7 +142,7 @@ object ContactKeyStore {
         val meta = loadContactMetadata(context, profileUuid, contactUuid) ?: return
         meta.put("verificationStatus", status)
         if (status == "verified") {
-            meta.put("verifiedAt", ISO_8601.format(Date()))
+            meta.put("verifiedAt", ISO_8601.format(Instant.now()))
         }
         saveContactMetadata(context, profileUuid, contactUuid, meta)
     }
@@ -177,7 +155,11 @@ object ContactKeyStore {
         epoch: Int
     ) {
         if (!CryptoFeatureFlag.isEnabled) return
-        EncryptedStore.writeBytes(context, File(contactDir(context, profileUuid, contactUuid), "public-key.bin"), publicKeyBytes)
+        try {
+            EncryptedStore.writeBytes(context, File(contactDir(context, profileUuid, contactUuid), "public-key.bin"), publicKeyBytes)
+        } catch (e: EncryptedStoreException) {
+            Log.w("CyphrContact", "saveContactPublicKey failed: ${e.message}")
+        }
     }
 
     fun loadContactPublicKey(
@@ -196,7 +178,11 @@ object ContactKeyStore {
         metadata: JSONObject
     ) {
         if (!CryptoFeatureFlag.isEnabled) return
-        EncryptedStore.writeText(context, File(contactDir(context, profileUuid, contactUuid), "contact-info.json"), metadata.toString())
+        try {
+            EncryptedStore.writeText(context, File(contactDir(context, profileUuid, contactUuid), "contact-info.json"), metadata.toString())
+        } catch (e: EncryptedStoreException) {
+            Log.w("CyphrContact", "saveContactMetadata failed: ${e.message}")
+        }
     }
 
     fun loadContactMetadata(
@@ -206,7 +192,7 @@ object ContactKeyStore {
     ): JSONObject? {
         if (!CryptoFeatureFlag.isEnabled) return null
         val text = EncryptedStore.readText(context, File(contactDir(context, profileUuid, contactUuid), "contact-info.json"))
-        return if (text != null) try { JSONObject(text) } catch (_: Exception) { null } else null
+        return if (text != null) try { JSONObject(text) } catch (_: Exception) { Log.w("CyphrContact", "loadContactMetadata JSON failed"); null } else null
     }
 
     fun listContactKeys(context: Context, profileUuid: String): List<ContactKeyMeta> {
